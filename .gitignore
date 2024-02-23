@@ -1,0 +1,17 @@
+/target
+/data/log
+/data/_web
+/data/_upload
+.idea
+*.http
+.git
+.vscode
+/tests
+.env
+fleet.toml
+/config/config.toml
+/config/cert
+*.exe
+/test
+常用命令.txt
+a.sql
