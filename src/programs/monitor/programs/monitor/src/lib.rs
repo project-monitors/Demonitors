@@ -1,14 +1,32 @@
 mod state;
 mod error;
+mod instructions;
+mod event;
 
 use anchor_lang::prelude::*;
 use state::{ OracleData, OracleConfig};
+use instructions::*;
 use error::ErrorCode;
+
 
 declare_id!("9vDvoPvmq68icnHWXowjqoEKgSs8TvBmmFvTcFztephV");
 
+
+fn check_context<T>(ctx: &Context<T>) -> Result<()> {
+    if !check_id(ctx.program_id) {
+        return err!(ErrorCode::InvalidProgramId);
+    }
+    // make sure there are no extra accounts
+    if !ctx.remaining_accounts.is_empty() {
+        return err!(ErrorCode::UnexpectedAccount);
+    }
+    Ok(())
+}
+
+
 #[program]
 pub mod monitor {
+    use anchor_lang::solana_program::short_vec::deserialize;
     use super::*;
 
     pub fn initialize_oracle_config(
@@ -17,40 +35,31 @@ pub mod monitor {
         description: String,
         total_phase: u8,
     ) -> Result<()> {
-        require!(name.as_bytes().len() < 50, ErrorCode::StringTooLong);
-        require!(description.as_bytes().len() < 200, ErrorCode::StringTooLong);
-        require!(ctx.accounts.authority_pubkeys.len() <= 4, ErrorCode::InvalidArgument);
-        let config_account = &mut ctx.accounts.config;
-        config_account.name = name;
-        config_account.description = description;
-        config_account.authority_pubkeys = ctx.accounts.authority_pubkeys.clone();
-        config_account.admin = ctx.accounts.user.key();
-        config_account.bump = ctx.bumps.config;
+        check_context(&ctx)?;
+        // let bump = ctx.bumps.config;
+        // msg!(bump);
+        ctx.accounts.process(name, description, total_phase, *ctx.bumps.get("config").unwrap())?;
         Ok(())
+    }
+
+    pub fn add_authority_to_oracle_config(
+        ctx: Context<AddAuthorityToOracleConfig>
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process()
+    }
+
+    pub fn remove_authority_from_oracle_config(
+        ctx: Context<RemoveAuthorityFromOracleConfig>
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process()
     }
 
     pub fn initialize_oracle_data(ctx: Context<InitializeOracleConfig>) -> Result<()>{
         Ok(())
     }
 
-}
-
-#[derive(Accounts)]
-#[instruction(name: String)]
-pub struct InitializeOracleConfig<'info> {
-    // space: 8 discriminator + 4 name length + 50 name + 4 description length + 200 description
-    //        + 1 total_phases + 4 authority_pubkeys + 4 * 32 authority_pubkeys + 32 admin pubkey + 1 bump
-    #[account(
-        init,
-        payer = user,
-        space = 8 + 4 + 50 + 4 + 200 + 1 + 4 + 128 + 32 + 1,
-        seeds = [b"oracle-config", name.as_bytes(), user.key().as_ref()],
-        bump)]
-    pub config: Account<'info, OracleConfig>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-    pub authority_pubkeys: Vec<Pubkey>,
-    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]

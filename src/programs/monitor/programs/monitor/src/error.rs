@@ -10,6 +10,10 @@ pub enum ErrorCode {
     UnInitialize,
     #[msg("Argument is invalid.")]
     InvalidArgument,
+    #[msg("Program ID is invalid.")]
+    InvalidProgramId,
+    #[msg("Unexpected Account.")]
+    UnexpectedAccount,
     #[msg("An overflow occurs.")]
     Overflow,
     #[msg("The string variable is too long.")]
