@@ -20,9 +20,8 @@ impl OracleConfig {
     pub fn add_authority(&mut self, user: Pubkey, pubkey: Pubkey) -> Result<()> {
         require_keys_eq!(user.key(), self.admin, ErrorCode::Unauthorized);
         if !self.has_authority(&pubkey) {
-            require!(self.authority_pubkeys.len() > 3, ErrorCode::TooManyAuthorities);
+            require!(self.authority_pubkeys.len() <= 4, ErrorCode::TooManyAuthorities);
             self.authority_pubkeys.push(pubkey);
-            Ok(())
         }
         Ok(())
     }
@@ -30,7 +29,7 @@ impl OracleConfig {
     pub fn remove_authority(&mut self, user: Pubkey, pubkey: Pubkey) -> Result<()> {
         require_keys_eq!(user.key(), self.admin, ErrorCode::Unauthorized);
         require!(self.has_authority(&pubkey), ErrorCode::AuthorityNotFound);
-        if let Some(index) = self.authority_pubkeys.iter().position(|x| x == pubkey) {
+        if let Some(index) = self.authority_pubkeys.iter().position(|x| *x == pubkey) {
             self.authority_pubkeys.remove(index);
         }
         Ok(())

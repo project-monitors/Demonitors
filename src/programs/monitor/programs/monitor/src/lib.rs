@@ -12,7 +12,7 @@ use error::ErrorCode;
 declare_id!("9vDvoPvmq68icnHWXowjqoEKgSs8TvBmmFvTcFztephV");
 
 
-fn check_context<T>(ctx: &Context<T>) -> Result<()> {
+fn check_context<T: anchor_lang::Bumps>(ctx: &Context<T>) -> Result<()> {
     if !check_id(ctx.program_id) {
         return err!(ErrorCode::InvalidProgramId);
     }
@@ -26,7 +26,6 @@ fn check_context<T>(ctx: &Context<T>) -> Result<()> {
 
 #[program]
 pub mod monitor {
-    use anchor_lang::solana_program::short_vec::deserialize;
     use super::*;
 
     pub fn initialize_oracle_config(
@@ -38,7 +37,7 @@ pub mod monitor {
         check_context(&ctx)?;
         // let bump = ctx.bumps.config;
         // msg!(bump);
-        ctx.accounts.process(name, description, total_phase, *ctx.bumps.get("config").unwrap())?;
+        ctx.accounts.process(name, description, total_phase, ctx.bumps.config)?;
         Ok(())
     }
 
