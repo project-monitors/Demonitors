@@ -4,12 +4,11 @@ mod instructions;
 mod event;
 
 use anchor_lang::prelude::*;
-use state::{ OracleData, OracleConfig};
 use instructions::*;
 use error::ErrorCode;
 
 
-declare_id!("9vDvoPvmq68icnHWXowjqoEKgSs8TvBmmFvTcFztephV");
+declare_id!("DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz");
 
 
 fn check_context<T: anchor_lang::Bumps>(ctx: &Context<T>) -> Result<()> {
@@ -55,25 +54,26 @@ pub mod monitor {
         ctx.accounts.process()
     }
 
-    pub fn initialize_oracle_data(ctx: Context<InitializeOracleConfig>) -> Result<()>{
+    pub fn initialize_oracle_data(
+        ctx: Context<InitializeOracleData>
+    ) -> Result<()>{
+        check_context(&ctx)?;
+        ctx.accounts.process(ctx.bumps.oracle)?;
         Ok(())
     }
 
+    pub fn set_oracle_data(
+        ctx: Context<SetOracleData>,
+        phase: u8,
+        raw_data: u64,
+        decimals: u8,
+        bump: u8
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process(phase, raw_data, decimals, bump)
+    }
 }
 
-#[derive(Accounts)]
-pub struct InitializeOracleData<'info> {
-    // space: 8 discriminator + 32 config + 1 phase + 8 raw_data + 1 decimals + 8 timestamp + 1 bump
-    pub config: Account<'info, OracleConfig>,
-    #[account(
-        init,
-        payer = user,
-        space = 8 + 32 + 1 + 8 + 1 + 8 + 1)]
-    pub oracle: Account<'info, OracleData>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
 
 
 

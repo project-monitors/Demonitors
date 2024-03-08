@@ -22,4 +22,7 @@ pub enum ErrorCode {
     TooManyAuthorities,
     #[msg("Authority not found")]
     AuthorityNotFound,
+    #[msg("Oracle config mismatched")]
+    ConfigMismatched,
+
 }

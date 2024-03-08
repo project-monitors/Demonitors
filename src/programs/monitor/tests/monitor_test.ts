@@ -1,7 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, Wallet } from "@coral-xyz/anchor";
 import { Monitor } from "../target/types/monitor";
-import { assert } from "chai";
+import {assert} from "chai";
+import {Commitment} from "@solana/web3.js";
 
 describe("monitor", () => {
   // Configure the client to use the local cluster.
@@ -20,18 +21,49 @@ describe("monitor", () => {
         )
     )[0];
   };
+
+  const getOracleDataDetails = (config_pubkey: anchor.web3.PublicKey) : { dataAccount: anchor.web3.PublicKey, bump: number } => {
+    const [dataAccount, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("oracle-data"),
+          config_pubkey.toBuffer(),
+        ],
+        program.programId
+    );
+
+    return { dataAccount, bump };
+  };
+
   const short_description: string = "This is a description to the oracle config account...";
   const authority_pubKey_string = "BH1VCRN52ZZeuedMkEukJDiZK58sjMzcRbYw7cADHQyg";
   const authority_pubKey = new anchor.web3.PublicKey(authority_pubKey_string);
-  const existed_config_pubkey = get_config_account("22QVCPu62x2Z3abSdgHzpU4PyFttu9u");
+  const existed_config_name = "22QVCPu62x2Z3abSdgHzpU4PyFttu9u";
+  const existed_config_pubkey = get_config_account(existed_config_name);
+  const randomKey: anchor.web3.Keypair = anchor.web3.Keypair.generate();
+  const random_name = randomKey.publicKey.toBase58().slice(0,31);
+  console.log(random_name)
 
   // Positive Test Cases
   it("Should: The oracle config account is initialized!", async () => {
-    // Add your test here.
-    const randomKey: anchor.web3.Keypair = anchor.web3.Keypair.generate();
-    const random_name = randomKey.publicKey.toBase58().slice(0,31);
-    console.log(random_name)
     let total_phase = 2;
+    const existed_config_account_info = await
+        provider.connection.getAccountInfo(existed_config_pubkey);
+    // Initialize the default config account for other test cases;
+    if (existed_config_account_info === null) {
+      console.log("Create test config account: ", existed_config_pubkey.toBase58())
+      const tx = await program.methods.initializeOracleConfig(
+          existed_config_name,
+          short_description,
+          total_phase
+      ).accounts({
+            config: existed_config_pubkey,
+            user: wallet.publicKey,
+            authorityPubkey: wallet.publicKey,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          }).rpc();
+      console.log("Create default config signature", tx);
+    }
+
     console.log("Authority Account pubKey: ", authority_pubKey.toBase58());
     const config_pubkey = get_config_account(random_name);
     console.log("Config Account pubKey: ", config_pubkey.toBase58());
@@ -42,7 +74,7 @@ describe("monitor", () => {
     ).accounts({
       config: config_pubkey,
       user: wallet.publicKey,
-      authorityPubkey: authority_pubKey,
+      authorityPubkey: wallet.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
     }).rpc();
     console.log("Your transaction signature", tx);
@@ -72,6 +104,84 @@ describe("monitor", () => {
         }
     ).rpc();
     console.log("Your transaction signature", tx);
+  });
+
+  it("Should: Initialize Oracle Data Account", async () => {
+    const existed_data_pubkey =  getOracleDataDetails(existed_config_pubkey).dataAccount;
+    const existed_config_account_info = await
+        provider.connection.getAccountInfo(existed_config_pubkey);
+    const existed_data_account_info = await
+        provider.connection.getAccountInfo(existed_data_pubkey);
+    if (existed_config_account_info === null) {
+      assert.fail("The default config account is not initialized");
+    }
+    // Initialize the default data account for other test cases;
+    if (existed_data_account_info === null) {
+      const tx = await program.methods.initializeOracleData().accounts({
+            config: existed_config_pubkey,
+            oracle: existed_data_pubkey,
+            user: wallet.publicKey,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          }
+      ).rpc();
+      console.log("Initialize default oracle data account signature", tx);
+    }
+
+    const config_pubkey = get_config_account(random_name);
+    const data_pubkey = getOracleDataDetails(config_pubkey).dataAccount;
+    const tx = await program.methods.initializeOracleData().accounts(
+        {
+          config: config_pubkey,
+          oracle: data_pubkey,
+          user: wallet.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        }
+    ).rpc();
+    console.log("Your transaction signature", tx);
+  });
+
+  it("Should: Set Oracle Data Account", async () => {
+    const existed_data_pubkey =  getOracleDataDetails(existed_config_pubkey).dataAccount;
+    const bump = getOracleDataDetails(existed_config_pubkey).bump;
+    const existed_config_account_info = await
+        provider.connection.getAccountInfo(existed_config_pubkey);
+    const existed_data_account_info = await
+        provider.connection.getAccountInfo(existed_data_pubkey);
+    if (existed_config_account_info === null || existed_data_account_info === null) {
+      assert.fail("The default config account or data account is not initialized");
+    }
+    const phase = 1;
+    const raw_data = 92;
+    const decimals = 0;
+
+
+    const subscriptionId = program.addEventListener("SetOracleDataEvent", (event, slot) => {
+      console.log('Event data:', event);
+      console.log('Slot:', slot);
+    });
+    const tx = await program.methods.setOracleData(
+        phase,
+        new anchor.BN(raw_data),
+        decimals,
+        bump
+    ).accounts({
+      config: existed_config_pubkey,
+      oracle: existed_data_pubkey,
+      user: wallet.publicKey,
+    }).rpc()
+
+    const latestBlockHash = await provider.connection.getLatestBlockhash();
+    await provider.connection.confirmTransaction({
+      blockhash: latestBlockHash.blockhash,
+      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+      signature: tx,},
+        "confirmed" );
+
+    // fetch and read the data
+    const oracle_data = await program.account.oracleData.fetch(existed_data_pubkey);
+    console.log('Deserialized account data:', oracle_data);
+    await program.removeEventListener(subscriptionId);
+
   });
 
   // Negative Test Cases

@@ -1,0 +1,361 @@
+{
+  "version": "0.1.0",
+  "name": "monitor",
+  "instructions": [
+    {
+      "name": "initializeOracleConfig",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "authorityPubkey",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "totalPhase",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "addAuthorityToOracleConfig",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "authorityPubkey",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "removeAuthorityFromOracleConfig",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "authorityPubkey",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initializeOracleData",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "oracle",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "setOracleData",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "oracle",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "phase",
+          "type": "u8"
+        },
+        {
+          "name": "rawData",
+          "type": "u64"
+        },
+        {
+          "name": "decimals",
+          "type": "u8"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "OracleConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "totalPhases",
+            "type": "u8"
+          },
+          {
+            "name": "authorityPubkeys",
+            "type": {
+              "vec": "publicKey"
+            }
+          },
+          {
+            "name": "admin",
+            "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OracleData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "publicKey"
+          },
+          {
+            "name": "phase",
+            "type": "u8"
+          },
+          {
+            "name": "rawData",
+            "type": "u64"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "timestamp",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "U64ValueChange",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old",
+            "type": "u64"
+          },
+          {
+            "name": "new",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "U8ValueChange",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old",
+            "type": "u8"
+          },
+          {
+            "name": "new",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "SetOracleDataEvent",
+      "fields": [
+        {
+          "name": "state",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "phaseChange",
+          "type": {
+            "option": {
+              "defined": "U8ValueChange"
+            }
+          },
+          "index": false
+        },
+        {
+          "name": "rawDataChange",
+          "type": {
+            "option": {
+              "defined": "U64ValueChange"
+            }
+          },
+          "index": false
+        },
+        {
+          "name": "decimalsChange",
+          "type": {
+            "option": {
+              "defined": "U8ValueChange"
+            }
+          },
+          "index": false
+        },
+        {
+          "name": "timestampChange",
+          "type": {
+            "option": {
+              "defined": "U64ValueChange"
+            }
+          },
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "You are not authorized to perform this action."
+    },
+    {
+      "code": 6001,
+      "name": "ReInitialize",
+      "msg": "The account has already been initialized."
+    },
+    {
+      "code": 6002,
+      "name": "UnInitialize",
+      "msg": "The account has not been initialized."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidArgument",
+      "msg": "Argument is invalid."
+    },
+    {
+      "code": 6004,
+      "name": "InvalidProgramId",
+      "msg": "Program ID is invalid."
+    },
+    {
+      "code": 6005,
+      "name": "UnexpectedAccount",
+      "msg": "Unexpected Account."
+    },
+    {
+      "code": 6006,
+      "name": "Overflow",
+      "msg": "An overflow occurs."
+    },
+    {
+      "code": 6007,
+      "name": "StringTooLong",
+      "msg": "The string variable is too long."
+    },
+    {
+      "code": 6008,
+      "name": "TooManyAuthorities",
+      "msg": "Authorities limit reached"
+    },
+    {
+      "code": 6009,
+      "name": "AuthorityNotFound",
+      "msg": "Authority not found"
+    },
+    {
+      "code": 6010,
+      "name": "ConfigMismatched",
+      "msg": "Oracle config mismatched"
+    }
+  ],
+  "metadata": {
+    "address": "DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz"
+  }
+}

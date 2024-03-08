@@ -5,7 +5,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-monitor = "9vDvoPvmq68icnHWXowjqoEKgSs8TvBmmFvTcFztephV"
+monitor = "DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz"
 
 [registry]
 url = "https://api.apr.dev"
