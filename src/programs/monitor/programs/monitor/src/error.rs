@@ -24,5 +24,4 @@ pub enum ErrorCode {
     AuthorityNotFound,
     #[msg("Oracle config mismatched")]
     ConfigMismatched,
-
 }

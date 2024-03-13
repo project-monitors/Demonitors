@@ -1,0 +1,28 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anchor-client = "0.29.0"
+serde = "1.0.197"
+toml = "0.8.10"
+anyhow = "1.0.80"
+thiserror = "1.0.57"
+tokio = "1.36.0"
+futures = "0.3.21"
+monitor = { path = "../programs/monitor/programs/monitor"}
+
+[lib]
+name = "client"
+path = "src/lib.rs"
+
+[[bin]]
+name = "monitor_client"
+path = "src/main.rs"
+
+[[bin]]
+name = "initial"
+path = "src/cmd/initial.rs"

@@ -1,8 +1,7 @@
-use anchor_lang::prelude::*;
-use crate::state::{OracleConfig, OracleData};
 use crate::error::ErrorCode;
 use crate::event::*;
-
+use crate::state::{OracleConfig, OracleData};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct InitializeOracleData<'info> {
@@ -20,9 +19,11 @@ pub struct InitializeOracleData<'info> {
 }
 
 impl<'info> InitializeOracleData<'info> {
-
     pub fn process(&mut self, bump: u8) -> Result<()> {
-        require!(self.config.has_authority(self.user.key), ErrorCode::Unauthorized);
+        require!(
+            self.config.has_authority(self.user.key),
+            ErrorCode::Unauthorized
+        );
         let oracle_data = &mut self.oracle;
         oracle_data.config = self.config.key();
         oracle_data.bump = bump;
@@ -42,12 +43,18 @@ pub struct SetOracleData<'info> {
     pub user: Signer<'info>,
 }
 
-impl<'info> SetOracleData<'info>  {
-
+impl<'info> SetOracleData<'info> {
     pub fn process(&mut self, phase: u8, raw_data: u64, decimals: u8, bump: u8) -> Result<()> {
         require_eq!(self.oracle.bump, bump, ErrorCode::InvalidArgument);
-        require_keys_eq!(self.config.key(), self.oracle.config, ErrorCode::ConfigMismatched);
-        require!(self.config.has_authority(self.user.key), ErrorCode::Unauthorized);
+        require_keys_eq!(
+            self.config.key(),
+            self.oracle.config,
+            ErrorCode::ConfigMismatched
+        );
+        require!(
+            self.config.has_authority(self.user.key),
+            ErrorCode::Unauthorized
+        );
         require!(phase < self.config.total_phases, ErrorCode::InvalidArgument);
         let clock = Clock::get()?;
         let current_time = clock.unix_timestamp;
@@ -61,7 +68,7 @@ impl<'info> SetOracleData<'info>  {
                 None
             } else {
                 data_account.phase = phase;
-                Some(U8ValueChange {old, new: phase})
+                Some(U8ValueChange { old, new: phase })
             }
         };
 
@@ -71,7 +78,7 @@ impl<'info> SetOracleData<'info>  {
                 None
             } else {
                 data_account.raw_data = raw_data;
-                Some(U64ValueChange {old, new: raw_data})
+                Some(U64ValueChange { old, new: raw_data })
             }
         };
 
@@ -81,7 +88,7 @@ impl<'info> SetOracleData<'info>  {
                 None
             } else {
                 data_account.decimals = decimals;
-                Some(U8ValueChange {old, new: decimals})
+                Some(U8ValueChange { old, new: decimals })
             }
         };
 
@@ -91,11 +98,14 @@ impl<'info> SetOracleData<'info>  {
                 None
             } else {
                 data_account.timestamp = current_time_u64;
-                Some(U64ValueChange {old, new: current_time_u64})
+                Some(U64ValueChange {
+                    old,
+                    new: current_time_u64,
+                })
             }
         };
 
-        emit!(SetOracleDataEvent{
+        emit!(SetOracleDataEvent {
             state: self.oracle.key(),
             phase_change,
             raw_data_change,
@@ -104,7 +114,4 @@ impl<'info> SetOracleData<'info>  {
         });
         Ok(())
     }
-
 }
-
-

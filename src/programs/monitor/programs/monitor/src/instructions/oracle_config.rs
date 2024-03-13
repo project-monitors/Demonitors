@@ -1,7 +1,6 @@
-use anchor_lang::prelude::*;
-use crate::state::OracleConfig;
 use crate::error::ErrorCode;
-
+use crate::state::OracleConfig;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 #[instruction(name: String)]
@@ -22,15 +21,22 @@ pub struct InitializeOracleConfig<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info>  InitializeOracleConfig<'info>  {
-
-    pub fn process(&mut self, name: String, description: String, total_phase: u8, bump: u8) -> Result<()> {
+impl<'info> InitializeOracleConfig<'info> {
+    pub fn process(
+        &mut self,
+        name: String,
+        description: String,
+        total_phase: u8,
+        bump: u8,
+    ) -> Result<()> {
         require!(name.as_bytes().len() < 32, ErrorCode::StringTooLong);
         require!(description.as_bytes().len() < 200, ErrorCode::StringTooLong);
         let config_account = &mut self.config;
         config_account.name = name;
         config_account.description = description;
-        config_account.authority_pubkeys.push(self.authority_pubkey.key());
+        config_account
+            .authority_pubkeys
+            .push(self.authority_pubkey.key());
         config_account.admin = self.user.key();
         config_account.total_phases = total_phase;
         config_account.bump = bump;
@@ -52,7 +58,6 @@ pub struct AddAuthorityToOracleConfig<'info> {
 }
 
 impl<'info> AddAuthorityToOracleConfig<'info> {
-
     pub fn process(&mut self) -> Result<()> {
         let config_account = &mut self.config;
         config_account.add_authority(self.user.key(), self.authority_pubkey.key())
@@ -75,7 +80,6 @@ pub struct RemoveAuthorityFromOracleConfig<'info> {
 }
 
 impl<'info> RemoveAuthorityFromOracleConfig<'info> {
-
     pub fn process(&mut self) -> Result<()> {
         let config_account = &mut self.config;
         config_account.remove_authority(self.user.key(), self.authority_pubkey.key())

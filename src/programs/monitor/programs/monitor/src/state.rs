@@ -1,6 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::error::ErrorCode;
-
+use anchor_lang::prelude::*;
 
 #[account]
 pub struct OracleConfig {
@@ -20,7 +19,10 @@ impl OracleConfig {
     pub fn add_authority(&mut self, user: Pubkey, pubkey: Pubkey) -> Result<()> {
         require_keys_eq!(user.key(), self.admin, ErrorCode::Unauthorized);
         if !self.has_authority(&pubkey) {
-            require!(self.authority_pubkeys.len() <= 4, ErrorCode::TooManyAuthorities);
+            require!(
+                self.authority_pubkeys.len() <= 4,
+                ErrorCode::TooManyAuthorities
+            );
             self.authority_pubkeys.push(pubkey);
         }
         Ok(())
@@ -34,7 +36,6 @@ impl OracleConfig {
         }
         Ok(())
     }
-
 }
 
 #[account]
@@ -46,4 +47,3 @@ pub struct OracleData {
     pub timestamp: u64,
     pub bump: u8,
 }
-
