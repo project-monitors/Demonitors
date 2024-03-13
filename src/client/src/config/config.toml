@@ -1,0 +1,12 @@
+[solana]
+rpc_url="https://api.devnet.solana.com"
+ws_url="wss://api.devnet.solana.com"
+keypair_path="/Users/maoma/.config/solana/id.json"
+commitment="confirmed"
+network="devnet"
+
+[oracle]
+config_name="terrordemo2"
+config_description="this is terror demo"
+total_phase=2
+authority_pubkey="42taRyQCVHSgeHynMDkomRSRQ26rZ5Ygm2pq7QGmDwnP"
