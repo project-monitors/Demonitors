@@ -21,4 +21,5 @@ pub struct OracleConfig {
     pub config_description: String,
     pub total_phase: u8,
     pub authority_pubkey: String,
+    pub interval: u64,
 }

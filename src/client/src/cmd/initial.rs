@@ -42,6 +42,12 @@ fn initialize () -> Result<(), Error> {
     println!("[Debug] Initial oracle data successfully. \n\
         https://explorer.solana.com/tx/{}{}", sig, suffix);
 
+    let config = caller.get_oracle_config()?;
+    println!("[Debug] Oracle config name is {:?}", config.name);
+
+    let  data = caller.get_oracle_data()?;
+    println!("[Debug] Oracle data raw data is {:?}", data.raw_data);
+
     Ok(())
 }
 

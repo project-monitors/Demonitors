@@ -2,7 +2,7 @@ use std::sync::Arc;
 use crate::prelude::*;
 use crate::service::fetcher::FetcherFNG;
 use anyhow::Result;
-use tokio::task::spawn_blocking;
+
 
 pub struct Feeder {
     pub caller: ChainCaller,
@@ -23,13 +23,9 @@ impl Feeder{
         })
     }
 
-    pub async fn fake_feed(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    pub async fn feed(&mut self) -> Result<()> {
+    pub fn feed(&mut self) -> Result<()> {
         println!("[Debug] feed begin...");
-        self.fetcher.fetch_fear_and_greed_index().await?;
+        self.fetcher.fetch_fear_and_greed_index()?;
         println!("[Debug] data fetched...");
         let fetched_data = &self.fetcher.index.data[0];
         let ts = fetched_data.timestamp.clone().parse::<u64>()?;

@@ -11,5 +11,4 @@ pub mod prelude {
     };
     pub use crate::util::*;
     pub use crate::service::feeder::Feeder;
-    pub use crate::service::cron::*;
 }

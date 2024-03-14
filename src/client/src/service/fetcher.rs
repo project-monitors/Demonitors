@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use anyhow::Result;
-use reqwest::Client;
+use reqwest::blocking::Client;
 use crate::core::error::ClientError;
 
 const API_URI: &str = "https://api.alternative.me/fng/";
@@ -42,12 +42,12 @@ impl FetcherFNG {
         }
     }
 
-    pub async fn fetch_fear_and_greed_index(&mut self) -> Result<()> {
+    pub fn fetch_fear_and_greed_index(&mut self) -> Result<()> {
         let url = self.url.clone();
-        let res =  self.client.get(&url).send().await?;
+        let res =  self.client.get(&url).send()?;
 
         if res.status().is_success() {
-            let index: FearAndGreedIndex = res.json().await?;
+            let index: FearAndGreedIndex = res.json()?;
             println!("[Debug] fear and greed index: {:?}", index);
             self.index = index
         } else {
