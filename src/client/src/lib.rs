@@ -1,5 +1,7 @@
 mod chain;
 mod core;
+mod service;
+mod util;
 
 pub mod prelude {
     pub use crate::core::conf::ClientConfig;
@@ -7,15 +9,7 @@ pub mod prelude {
         ChainCaller,
         OracleDataRequest,
     };
+    pub use crate::util::*;
+    pub use crate::service::feeder::Feeder;
+    pub use crate::service::cron::*;
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[test]
-//     fn it_works() {
-//         let result = add(2, 2);
-//         assert_eq!(result, 4);
-//     }
-// }

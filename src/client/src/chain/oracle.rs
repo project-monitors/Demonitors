@@ -140,16 +140,8 @@ impl ChainCaller{
                     &self.config_pda.0.to_string()
                 )
             })?;
-        let oracle_config =  OracleConfig::try_deserialize(&mut oracle_config_account_data.as_slice());
-
-        match oracle_config {
-            Ok(o)=> {
-                Ok(o)
-            }
-            Err(e) => {
-                Err(Error::new(e))
-            }
-        }
+        OracleConfig::try_deserialize(&mut oracle_config_account_data.as_slice())
+            .map_err(|e|Error::new(e))
     }
 
     pub fn initialize_oracle_data(&self) -> Result<Signature> {
@@ -193,16 +185,9 @@ impl ChainCaller{
                     &self.data_pda.0.to_string()
                 )
             })?;
-        let oracle_data =  OracleData::try_deserialize(&mut oracle_data_account_data.as_slice());
+       OracleData::try_deserialize(&mut oracle_data_account_data.as_slice())
+            .map_err(|e|Error::new(e))
 
-        match oracle_data {
-            Ok(o)=> {
-                Ok(o)
-            }
-            Err(e) => {
-                Err(Error::new(e))
-            }
-        }
     }
 }
 
