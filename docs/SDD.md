@@ -4,6 +4,66 @@
 
 ## Programs
 
+### miner
+
+- vote account 可以创建deposit pool account
+  - pool account 可以创建stake account和mint account
+  - 以及对应的stake authority和mint authority
+  - 
+- 
+- 根据场景可以生成多种SBT
+  - 所有的SBT属于同一个Collection
+- 
+
+
+
+EventConfig
+通过OracleConfig PDA
+
+每个下注都是一个EventMarket
+EventMarket分多种：
+
+RawDataEventMarket
+通过"raw-data", eventconfigPDA, started, finalize
+
+PhaseEventMarket
+
+每个人都可以InitialMarket，但是不能影响全局配置
+
+Deposit
+SBT
+positionAccount
+If first Create Mint 1 SBT For Him
+Only 1
+
+先就支持这一个
+
+
+
+
+每天结算一次 每天开启3个Market 定时任务
+
+Expired
+
+Finalized
+
+
+参与前提
+
+
+
+
+Event Program
+
+Finalizer client
+
+
+Settle Program Mint for
+
+
+
+在Market放置一个区块高度（用于获得当初oracle Data里的raw_data）
+
 ### monitor
 
 Monitor programs承担“互联网景观”预言机链上部分的功能。
