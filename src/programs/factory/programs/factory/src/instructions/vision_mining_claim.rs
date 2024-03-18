@@ -1,6 +1,7 @@
 use crate::state::*;
 use crate::error::ErrorCode;
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::{get_associated_token_address_with_program_id};
 use anchor_spl::token_interface::{
     Mint, TokenAccount, TokenInterface,
     TransferChecked, transfer_checked};
@@ -33,9 +34,7 @@ pub struct VisionMiningClaim<'info> {
     bump = global_config.vision_mining_bump)]
     pub vision_mining_pda: UncheckedAccount<'info>,
     #[account(
-    mut,
-    associated_token::mint = mint,
-    associated_token::authority = vision_mining_pda)]
+    mut)]
     pub vision_mining_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(
     mut)]
@@ -44,6 +43,14 @@ pub struct VisionMiningClaim<'info> {
 }
 
 impl<'info> VisionMiningClaim<'info> {
+
+    //noinspection ALL
+    pub fn get_ata(&self) -> Pubkey {
+        get_associated_token_address_with_program_id(
+            &self.vision_mining_pda.key(),
+            &self.mint.key(),
+            &self.token_program.key())
+    }
 
     pub fn transfer_ctx(
         &self) -> CpiContext<'_, '_, '_,'info, TransferChecked<'info>> {
@@ -60,6 +67,7 @@ impl<'info> VisionMiningClaim<'info> {
     pub fn process(
         &mut self,
         params: VisionMiningClaimParams) -> Result<()> {
+        require_keys_eq!(self.get_ata(), self.vision_mining_token_account.key(), ErrorCode::UnexpectedAccount);
         let clock = Clock::get()?;
         let current_time = clock.unix_timestamp;
         require!(current_time > 0, ErrorCode::Overflow);

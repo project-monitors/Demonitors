@@ -8,9 +8,9 @@ use error::ErrorCode;
 use instructions::*;
 
 
-declare_id!("a2ccqyz2DfwQNdLmaBqro8ZnDM6E5KV3hawtrVQzDY4");
+declare_id!("Fb2WCRVGtwvigK7fuvyyVu4ckLduW94Jn8NxqGzXFdEW");
 
-pub const FT_MAX_SUPPLY: u64 = 1_000_000_000 * 10^9;
+pub const FT_MAX_SUPPLY: u64 = 1_000_000_000 * 1_000_000_000;
 
 fn check_context<T: anchor_lang::Bumps>(ctx: &Context<T>) -> Result<()> {
     if !check_id(ctx.program_id) {

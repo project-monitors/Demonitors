@@ -5,7 +5,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-factory = "a2ccqyz2DfwQNdLmaBqro8ZnDM6E5KV3hawtrVQzDY4"
+factory = "Fb2WCRVGtwvigK7fuvyyVu4ckLduW94Jn8NxqGzXFdEW"
 
 [registry]
 url = "https://api.apr.dev"
@@ -15,4 +15,8 @@ cluster = "devnet"
 wallet = "/Users/maoma/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[[test.genesis]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+program = "tests/metaplex_token_metadata_program.so"

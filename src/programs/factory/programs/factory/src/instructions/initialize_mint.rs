@@ -1,17 +1,20 @@
 use crate::state::*;
 use crate::error::ErrorCode;
-use anchor_lang::prelude::*;
+use anchor_lang::{
+    prelude::*,
+    solana_program::sysvar::instructions::id as INSTRUCTION_ID,
+};
 use anchor_spl::{
     token_interface::{Mint, TokenInterface },
     associated_token::AssociatedToken,
     metadata::{
-        CreateMetadataAccountsV3,
         Metadata,
     },
-    metadata::self,
-    metadata::mpl_token_metadata::types::DataV2
+    metadata::mpl_token_metadata::{
+        types::TokenStandard,
+        instructions::CreateV1CpiBuilder
+    },
 };
-
 
 
 /// Parameters for initializing the governance token mint account
@@ -101,8 +104,7 @@ pub struct InitializeMint<'info> {
     // pub stake_mining_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     /// CHECK - create token metadata account manually
     #[account(
-    zero,
-    owner = crate::ID,
+    mut,
     address = MintConfig::find_metadata(mint.key())?.0 @ ErrorCode::UnexpectedAccount,
     )]
     pub metadata_account: AccountInfo<'info>,
@@ -110,30 +112,15 @@ pub struct InitializeMint<'info> {
     pub token_metadata_program: Program<'info, Metadata>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
+    /// CHECK: no need to check it out
+    #[account(address = INSTRUCTION_ID())]
+    pub sysvar_instruction: UncheckedAccount<'info>,
     pub rent: Sysvar<'info, Rent>,
 }
 
 impl<'info> InitializeMint<'info> {
 
     //noinspection ALL
-    pub fn create_metadata_accounts_ctx(
-        &self,
-    ) -> CpiContext<'_, '_, '_, 'info, CreateMetadataAccountsV3<'info>> {
-        let program = self.token_metadata_program.to_account_info();
-
-        let accounts = CreateMetadataAccountsV3 {
-            metadata: self.metadata_account.to_account_info(),
-            mint: self.mint.to_account_info(),
-            mint_authority: self.authority.to_account_info(),
-            payer: self.payer.to_account_info(),
-            update_authority: self.authority.to_account_info(),
-            system_program: self.system_program.to_account_info(),
-            rent: self.rent.to_account_info(),
-        };
-        CpiContext::new(program, accounts)
-    }
-
-
     pub fn process(
         &mut self,
         params: InitializeMintParams) -> Result<()> {
@@ -146,31 +133,31 @@ impl<'info> InitializeMint<'info> {
         require_keys_eq!(mint_pda, self.mint.key(), ErrorCode::UnexpectedAccount);
         require_keys_eq!(mint_config_pda, self.mint_config.key(), ErrorCode::UnexpectedAccount);
         require_keys_eq!(authority_pda, self.authority.key(), ErrorCode::UnexpectedAccount);
-        let mint_key = self.mint.key();
         let signer_seeds: [&[&[u8]]; 1] = [&[
             MintConfig::AUTHORITY_SEED,
-            &mint_key.as_ref()[..],
+            &mint_pda.as_ref()[..],
             &[authority_bump],
         ]];
-        metadata::create_metadata_accounts_v3(
-            self.create_metadata_accounts_ctx()
-                .with_signer(&signer_seeds),
-            DataV2 {
-                name: params.name,
-                symbol: params.symbol,
-                uri: params.uri,
-                seller_fee_basis_points: 0,
-                creators: None,
-                collection: None,
-                uses: None,
-            },
-            true,
-            true,
-            None,
-        )?;
+        CreateV1CpiBuilder::new(&self.token_metadata_program.to_account_info())
+            .metadata(&self.metadata_account.to_account_info())
+            .mint(&self.mint.to_account_info(), false)
+            .authority(&self.authority.to_account_info())
+            .payer(&self.payer.to_account_info())
+            .update_authority(&self.authority.to_account_info(), false)
+            .system_program(&self.system_program.to_account_info())
+            .sysvar_instructions(&self.sysvar_instruction.to_account_info())
+            .spl_token_program(&self.token_program.to_account_info())
+            .name(params.name)
+            .symbol(params.symbol)
+            .uri(params.uri)
+            .seller_fee_basis_points(0)
+            .token_standard(TokenStandard::Fungible)
+            .invoke_signed(&signer_seeds)?;
+
         let mint_config = &mut self.mint_config;
         mint_config.mint = self.mint.key();
-        mint_config.metadata = self.metadata_account.key();
+        mint_config.metadata = self.mint.key();
+        // mint_config.metadata = self.metadata_account.key();
         mint_config.mint_bump = mint_bump;
         mint_config.config_bump = mint_config_bump;
         mint_config.metadata_bump = metadata_bump;

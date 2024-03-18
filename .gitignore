@@ -13,4 +13,6 @@ yarn.lock
 .DS_Store
 **/*.rs.bk
 test-ledger
+.anchor
+
 

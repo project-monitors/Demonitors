@@ -24,6 +24,8 @@ pub struct MintTokens<'info> {
     seeds = [GlobalConfig::GLOBAL_CONFIG_SEED],
     bump = global_config.global_config_bump)]
     pub global_config: Account<'info, GlobalConfig>,
+    #[account(
+    mut)]
     pub mint: InterfaceAccount<'info, Mint>,
     /// CHECK: We won't read or write to this account, just use it to calculate ATA
     pub user: UncheckedAccount<'info>,
