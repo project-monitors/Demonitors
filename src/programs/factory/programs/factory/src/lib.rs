@@ -8,7 +8,7 @@ use error::ErrorCode;
 use instructions::*;
 
 
-declare_id!("Fb2WCRVGtwvigK7fuvyyVu4ckLduW94Jn8NxqGzXFdEW");
+declare_id!("EHQpL4Q8hMEsufdDR5bsSeSahqt8ShkHbxzPyGsurgR5");
 
 pub const FT_MAX_SUPPLY: u64 = 1_000_000_000 * 1_000_000_000;
 

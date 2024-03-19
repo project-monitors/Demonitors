@@ -5,7 +5,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-factory = "Fb2WCRVGtwvigK7fuvyyVu4ckLduW94Jn8NxqGzXFdEW"
+factory = "EHQpL4Q8hMEsufdDR5bsSeSahqt8ShkHbxzPyGsurgR5"
 
 [registry]
 url = "https://api.apr.dev"

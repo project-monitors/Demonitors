@@ -207,6 +207,11 @@ export type Factory = {
           "isSigner": true
         },
         {
+          "name": "visionMiningAdmin",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
           "name": "globalConfig",
           "isMut": false,
           "isSigner": false
@@ -755,6 +760,11 @@ export const IDL: Factory = {
         {
           "name": "payer",
           "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "visionMiningAdmin",
+          "isMut": false,
           "isSigner": true
         },
         {

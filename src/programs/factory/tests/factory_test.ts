@@ -2,6 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import {Program, Wallet} from "@coral-xyz/anchor";
 import {Factory} from "../target/types/factory";
 import {} from '@metaplex-foundation/mpl-token-metadata';
+import { readFileSync } from 'fs';
 import {ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID,
     getAssociatedTokenAddress, createAssociatedTokenAccountInstruction} from "@solana/spl-token";
 import {assert} from "chai";
@@ -96,13 +97,14 @@ describe("factory", () => {
                 visionMiningAdminPubkey: new_admin.publicKey
             }).rpc();
         console.log("Change vision mining admin signature: ", tx);
-        const old_admin_pubkey = wallet.publicKey;
+        const old_admin_pubkey =
+            new anchor.web3.PublicKey("9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG");
         console.log("Change vision mining admin back to: ", old_admin_pubkey)
         tx = await program.methods.changeVisionMiningAdmin()
             .accounts({
                 globalConfig: existed_global_config_pubkey,
                 user: wallet.publicKey,
-                visionMiningAdminPubkey: wallet.publicKey,
+                visionMiningAdminPubkey: old_admin_pubkey,
             }).rpc();
         console.log("Change vision mining admin back signature: ", tx);
     })
@@ -184,6 +186,12 @@ describe("factory", () => {
     });
 
     it("Should: Claim vision mining", async () => {
+
+        // load vision mining admin keypair
+        const vision_mining_admin_wallet_path = '../../../test-ledger/wallet.json';
+        const vision_mining_admin_wallet_string = readFileSync(vision_mining_admin_wallet_path, 'utf8');
+        const vision_mining_admin_keypair = anchor.web3.Keypair.fromSecretKey(new Uint8Array(JSON.parse(vision_mining_admin_wallet_string)));
+
         const mint_pubkey = get_pda(MINT_SEED).account_pubkey;
         console.log("Mint account: ", mint_pubkey.toBase58());
         const vision_mining_pda = get_pda(VISION_MINING_SEED).account_pubkey;
@@ -238,14 +246,44 @@ describe("factory", () => {
         const tx = await program.methods.visionMiningClaim(params)
             .accounts({
                 payer: wallet.publicKey,
+                visionMiningAdmin: vision_mining_admin_keypair.publicKey,
                 globalConfig: existed_global_config_pubkey,
                 mint: mint_pubkey,
                 visionMiningPda: vision_mining_pda,
                 visionMiningTokenAccount: vision_mining_token_account,
                 tokenAccount: user_token_account,
                 tokenProgram: TOKEN_2022_PROGRAM_ID,
-            }).rpc().catch(e => console.error(e));
-        console.log("Signature: ", tx);
+            }).transaction();
+
+        // Partial sign with admin keypair
+
+        const { blockhash } = await provider.connection.getLatestBlockhash();
+        tx.recentBlockhash = blockhash;
+        tx.feePayer = wallet.publicKey;
+        console.log("Vision mining admin pubkey: ", vision_mining_admin_keypair.publicKey.toBase58())
+        tx.partialSign(vision_mining_admin_keypair);
+
+
+        // Serialize transaction for client signing
+        let serialized_transaction = tx.serialize({ requireAllSignatures: false });
+        console.log("Serialized Transaction send from admin");
+
+        // Deserialize transaction and sign with client wallet
+        let transaction_to_sign = anchor.web3.Transaction.from(serialized_transaction);
+        transaction_to_sign.partialSign(wallet.payer);
+
+        // Re-serialize and send transaction
+        // serialized_transaction = transaction_to_sign.serialize({ requireAllSignatures: false });
+        const txId = await provider.sendAndConfirm(transaction_to_sign).catch(e => console.error(e));
+
+        console.log("Transaction signature: ", txId);
+
+        const latestBlockHash = await provider.connection.getLatestBlockhash();
+        await provider.connection.confirmTransaction({
+                blockhash: latestBlockHash.blockhash,
+                lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+                signature: txId,},
+            "confirmed" );
 
         await program.removeEventListener(subscriptionId);
     });

@@ -17,9 +17,11 @@ pub struct VisionMiningClaimParams {
 #[derive(Accounts)]
 pub struct VisionMiningClaim<'info> {
     #[account(
-    mut,
-    address = global_config.vision_mining_admin)]
+    mut)]
     pub payer: Signer<'info>,
+    #[account(
+    address = global_config.vision_mining_admin)]
+    pub vision_mining_admin: Signer<'info>,
     #[account(
     seeds = [GlobalConfig::GLOBAL_CONFIG_SEED],
     bump = global_config.global_config_bump)]
