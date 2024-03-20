@@ -30,4 +30,10 @@ pub enum ErrorCode {
     NotSufficientBalance,
     #[msg("The transaction is timeout")]
     TransactionTimeout,
+    #[msg("Close account failed")]
+    CloseAccountFailed,
+    #[msg("Unsupported now")]
+    UnsupportedNow,
+    #[msg("Get oracle data error")]
+    OracleDataError,
 }

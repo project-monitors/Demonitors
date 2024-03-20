@@ -32,6 +32,8 @@ pub struct InitializeGlobalConfig<'info> {
     pub stake_mining_pda: UncheckedAccount<'info>,
     /// CHECK: System account for vision mining admin, won't read or write
     pub vision_mining_admin_pubkey: UncheckedAccount<'info>,
+    /// CHECK: System account for governor, won't read or write
+    pub governor: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -54,6 +56,7 @@ impl<'info> InitializeGlobalConfig<'info> {
         global_config_account.event_mining_pda = self.event_mining_pda.key();
         global_config_account.stake_mining_pda = self.event_mining_pda.key();
         global_config_account.vision_mining_admin = self.vision_mining_admin_pubkey.key();
+        global_config_account.governor = self.governor.key();
         global_config_account.global_config_bump = global_bump;
         global_config_account.vision_mining_bump = vision_bump;
         global_config_account.event_mining_bump = event_bump;

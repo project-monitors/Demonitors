@@ -1,11 +1,9 @@
 import * as anchor from "@coral-xyz/anchor";
 import {Program, Wallet} from "@coral-xyz/anchor";
 import {Factory} from "../target/types/factory";
-import {} from '@metaplex-foundation/mpl-token-metadata';
 import { readFileSync } from 'fs';
 import {ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID,
     getAssociatedTokenAddress, createAssociatedTokenAccountInstruction} from "@solana/spl-token";
-import {assert} from "chai";
 
 
 describe("factory", () => {
@@ -22,12 +20,10 @@ describe("factory", () => {
     const MINT_SEED = "mint";
     const MINT_CONFIG_SEED = "mint_config";
     const AUTHORITY_SEED = "authority";
+    const SBT_COLLECTION_SEED = "collection";
     const MPL_TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey(
         "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
-    const get_random_seed = (): string => {
-        return anchor.web3.Keypair.generate().publicKey.toBase58().slice(0, 31);
-    }
 
     const get_pda = (name: string): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
         const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -63,10 +59,22 @@ describe("factory", () => {
         return {account_pubkey, bump}
     }
 
+    const get_master_edition = (mint_key: anchor.web3.PublicKey): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+        const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+            [
+                Buffer.from("metadata"),
+                MPL_TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+                mint_key.toBuffer(),
+                Buffer.from("edition")
+            ],
+            MPL_TOKEN_METADATA_PROGRAM_ID
+        );
+        return {account_pubkey, bump}
+    }
+
     const existed_global_config_pubkey = get_pda(GLOBAL_CONFIG_SEED).account_pubkey;
 
     it("Should: The global config account is initialized!", async () => {
-        // Add your test here.
         const existed_config_account_info = await
             provider.connection.getAccountInfo(existed_global_config_pubkey);
         if (existed_config_account_info === null) {
@@ -79,6 +87,7 @@ describe("factory", () => {
                     eventMiningPda: get_pda(EVENT_MINING_SEED).account_pubkey,
                     stakeMiningPda: get_pda(STAKE_MINING_SEED).account_pubkey,
                     visionMiningAdminPubkey: wallet.publicKey,
+                    governor: wallet.publicKey,
                     systemProgram: anchor.web3.SystemProgram.programId,
                 }).rpc();
             console.log("[ONCE] Create Global Config Account Signature: ", tx);
@@ -98,7 +107,8 @@ describe("factory", () => {
             }).rpc();
         console.log("Change vision mining admin signature: ", tx);
         const old_admin_pubkey =
-            new anchor.web3.PublicKey("9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG");
+            new anchor.web3.PublicKey("BH1VCRN52ZZeuedMkEukJDiZK58sjMzcRbYw7cADHQyg");
+        //     new anchor.web3.PublicKey("9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG");
         console.log("Change vision mining admin back to: ", old_admin_pubkey)
         tx = await program.methods.changeVisionMiningAdmin()
             .accounts({
@@ -121,8 +131,8 @@ describe("factory", () => {
         const existed_mint_config_account_info = await
             provider.connection.getAccountInfo(mint_config_pubkey);
         const params = {
-            name: "Entropy",
-            symbol: "ETP",
+            name: "Moni",
+            symbol: "MONI",
             uri: "monitocol.xyz",
             decimals: 9
         };
@@ -279,6 +289,8 @@ describe("factory", () => {
         console.log("Transaction signature: ", txId);
 
         const latestBlockHash = await provider.connection.getLatestBlockhash();
+
+        // @ts-ignore
         await provider.connection.confirmTransaction({
                 blockhash: latestBlockHash.blockhash,
                 lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
@@ -286,5 +298,44 @@ describe("factory", () => {
             "confirmed" );
 
         await program.removeEventListener(subscriptionId);
+    });
+
+    it("Should: Initialize Collection Mint, Metadata and MasterEdition Account", async () => {
+        const mint_pubkey = get_pda(SBT_COLLECTION_SEED).account_pubkey;
+        console.log("Mint account: ", mint_pubkey.toBase58())
+        const metadata_pubkey = get_metadata(mint_pubkey).account_pubkey;
+        console.log("Metadata account: ", metadata_pubkey.toBase58());
+        const master_edition_pubkey = get_master_edition(mint_pubkey).account_pubkey;
+        console.log("Master edition account: ", master_edition_pubkey.toBase58());
+        const authority_pubkey = get_authority(mint_pubkey).account_pubkey;
+        console.log("Authority account: ", authority_pubkey.toBase58())
+        const existed_mint_account_info = await
+            provider.connection.getAccountInfo(mint_pubkey);
+        const params = {
+            name: "Moni",
+            symbol: "MONI",
+            uri: "monitocol.xyz",
+            decimals: 9
+        };
+        if (existed_mint_account_info === null) {
+            console.log("[ONCE] Create Collection Mint, Metadata and Master Edition Account.");
+            let tx = await program.methods.initializeCollection(params)
+                .accounts({
+                    payer: wallet.publicKey,
+                    globalConfig: existed_global_config_pubkey,
+                    authority: authority_pubkey,
+                    mint: mint_pubkey,
+                    metadata: metadata_pubkey,
+                    masterEdition: master_edition_pubkey,
+                    tokenProgram: TOKEN_2022_PROGRAM_ID,
+                    tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+                    systemProgram: anchor.web3.SystemProgram.programId,
+                    sysvarInstruction: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                    rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+                }).rpc().catch(e => console.error(e));
+            console.log("[ONCE] Create Collection Mint, Metadata and Master Edition Account Signature: ", tx);
+        } else {
+            console.log("Collection Accounts has been initialized");
+        }
     });
 });

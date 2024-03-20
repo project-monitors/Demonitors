@@ -11,7 +11,7 @@ monitor = "DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "Localnet"
 wallet = "/Users/maoma/.config/solana/id.json"
 
 [scripts]

@@ -9,7 +9,7 @@ pub struct InitializeOracleData<'info> {
     #[account(
     init,
     payer = user,
-    space = 8 + 32 + 1 + 8 + 1 + 8 + 1,
+    space = 8 + 32 + 1 + 8 + 1 + 8 + 8 + 1,
     seeds = [b"oracle-data", config.key().as_ref()],
     bump)]
     pub oracle: Account<'info, OracleData>,
@@ -57,6 +57,7 @@ impl<'info> SetOracleData<'info> {
         );
         require!(phase < self.config.total_phases, ErrorCode::InvalidArgument);
         let clock = Clock::get()?;
+        let slot = clock.slot;
         let current_time = clock.unix_timestamp;
         require!(current_time > 0, ErrorCode::Overflow);
         let current_time_u64 = current_time as u64;
@@ -104,6 +105,8 @@ impl<'info> SetOracleData<'info> {
                 })
             }
         };
+
+        data_account.slot = slot;
 
         emit!(SetOracleDataEvent {
             state: self.oracle.key(),

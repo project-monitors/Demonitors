@@ -2,6 +2,7 @@ mod error;
 mod instructions;
 mod state;
 mod event;
+mod utils;
 
 use anchor_lang::prelude::*;
 use error::ErrorCode;
@@ -26,8 +27,9 @@ fn check_context<T: anchor_lang::Bumps>(ctx: &Context<T>) -> Result<()> {
 
 #[program]
 pub mod factory {
-
     use super::*;
+
+    // admin instructions
 
     pub fn initialize_global_config(
         ctx: Context<InitializeGlobalConfig>,
@@ -61,6 +63,16 @@ pub mod factory {
         ctx.accounts.process(params)
     }
 
+    pub fn initialize_collection(
+        ctx: Context<InitializeCollection>,
+        params: InitializeCollectionParams
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process(params)
+    }
+
+    // privilege instructions:
+
     pub fn vision_mining_claim(
         ctx: Context<VisionMiningClaim>,
         params: VisionMiningClaimParams
@@ -68,6 +80,37 @@ pub mod factory {
         check_context(&ctx)?;
         ctx.accounts.process(params)
     }
+
+    pub fn create_event_market(
+        ctx: Context<CreateEventMarket>,
+        params: CreateEventMarketParams
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process(params)
+    }
+
+    pub fn mint_tag_sbt(
+        ctx: Context<MintTagSBT>,
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        Ok(())
+    }
+
+    // Initialize EventMarket config (pda of oracle config)
+    // contains: Oracle Config
+    // Market Type
+    // Orientation
+
+    // Initialize Market
+
+    // Initialize SBT
+
+
+
+    // Position Account
+
+    // Orient( Deposit for SBT)
+
 
     // Initialize monitor NFT
 

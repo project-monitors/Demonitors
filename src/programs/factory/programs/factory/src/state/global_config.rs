@@ -7,6 +7,8 @@ use crate::ID;
 pub struct GlobalConfig {
     /// The admin of the factory program.
     pub admin: Pubkey,
+    /// For vote resolver
+    pub governor: Pubkey,
     /// The off-chain supervisor for vision mining.
     pub vision_mining_admin: Pubkey,
     pub vision_mining_pda: Pubkey,
@@ -19,7 +21,7 @@ pub struct GlobalConfig {
 }
 
 impl GlobalConfig {
-    pub const LEN: usize = 32 * 5 + 1 * 4;
+    pub const LEN: usize = 32 * 6 + 1 * 4;
 
     pub const GLOBAL_CONFIG_SEED: &'static [u8] = b"global_config";
     pub const VISION_MINING_SEED: &'static [u8] = b"ft_vision_mining_pda";

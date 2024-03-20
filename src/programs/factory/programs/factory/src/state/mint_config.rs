@@ -18,6 +18,7 @@ impl MintConfig {
     pub const MINT_SEED: &'static [u8] = b"mint";
     pub const MINT_CONFIG_SEED: &'static [u8] = b"mint_config";
     pub const AUTHORITY_SEED: &'static [u8] = b"authority";
+    pub const SBT_COLLECTION_SEED: &'static [u8] = b"collection";
 
 
     pub fn find_mint(event_config: Option<Pubkey>) -> (Pubkey, u8) {
@@ -56,5 +57,20 @@ impl MintConfig {
             ],
             &metadata_program_id,
         ))
+    }
+
+    pub fn find_master_edition(mint: Pubkey) -> Result<(Pubkey, u8)> {
+        let metadata_program_id = Pubkey::try_from_slice(MPL_TOKEN_METADATA_ID.as_ref())?;
+        Ok(
+            Pubkey::find_program_address(
+                &[
+                    "metadata".as_bytes(),
+                    metadata_program_id.as_ref(),
+                    mint.as_ref(),
+                    "edition".as_bytes(),
+                ],
+                &metadata_program_id
+            )
+        )
     }
 }
