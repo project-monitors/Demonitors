@@ -1,15 +1,16 @@
 mod error;
 mod instructions;
 mod state;
-mod event;
+mod chain_event;
 mod utils;
 
 use anchor_lang::prelude::*;
 use error::ErrorCode;
 use instructions::*;
+use instructions::resolvers::*;
 
 
-declare_id!("EHQpL4Q8hMEsufdDR5bsSeSahqt8ShkHbxzPyGsurgR5");
+declare_id!("32dhe2sZpyiL5xQvUnAfTGd6unKTXYS4E3JJ2Jx1V1Gz");
 
 pub const FT_MAX_SUPPLY: u64 = 1_000_000_000 * 1_000_000_000;
 
@@ -81,49 +82,91 @@ pub mod factory {
         ctx.accounts.process(params)
     }
 
+    pub fn create_event_config(
+        ctx: Context<CreateEventConfig>,
+        params: CreateEventConfigParams
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process(params, ctx.bumps.event_config)
+    }
+
     pub fn create_event_market(
         ctx: Context<CreateEventMarket>,
         params: CreateEventMarketParams
     ) -> Result<()> {
         check_context(&ctx)?;
+        ctx.accounts.process(params, ctx.bumps.event_market_account)
+    }
+
+    pub fn toggle_event_market(
+        ctx: Context<ToggleEventMarket>,
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process()
+    }
+
+    pub fn create_event_sbt(
+        ctx: Context<CreateEventSBT>,
+        params: CreateEventSBTParams
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process(params, ctx.bumps.mint, ctx.bumps.authority)
+    }
+
+    pub fn mint_event_sbt_master_edition(
+        ctx: Context<MintEventSBTMasterEdition>
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process()
+    }
+
+    pub fn resolve(
+        ctx: Context<FearAndGreedEventMarketResolve>,
+        params: FearAndGreedEventMarketResolveParams
+    ) -> Result<()> {
+        check_context(&ctx)?;
         ctx.accounts.process(params)
     }
 
-    pub fn mint_tag_sbt(
-        ctx: Context<MintTagSBT>,
+    // public instructions:
+
+    pub fn create_sbt(
+        ctx: Context<CreateSBT>,
+        params: CreateSBTParams
     ) -> Result<()> {
         check_context(&ctx)?;
-        Ok(())
+        ctx.accounts.process(params, ctx.bumps.mint)
     }
 
-    // Initialize EventMarket config (pda of oracle config)
-    // contains: Oracle Config
-    // Market Type
-    // Orientation
+    pub fn mint_sbt(
+        ctx: Context<MintSBT>
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process()
+    }
 
-    // Initialize Market
+    pub fn choose(
+        ctx: Context<Choose>,
+        params: ChooseParams
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process(params)
+    }
 
-    // Initialize SBT
+    pub fn withdraw(
+        ctx: Context<Withdraw>,
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process()
+    }
 
-
-
-    // Position Account
-
-    // Orient( Deposit for SBT)
-
-
-    // Initialize monitor NFT
-
-    // Initialize Event SBT
-    // EventSBTConfig = event_config + OracleConfigPubkey
-
-
-
-    // initial Master Edition: master editionMint master edition
-    // MasterEditionMint "event_sbt_me" + EventSBTConfigPubkey + Phase
-
-    // mint_edition_sbt: edition mint, edition token account, edition metadata
-    // EditionMint = "event_sbt_e" + MasterEditionMintPubkey + UserPubkey
+    pub fn claim(
+        ctx: Context<Claim>,
+        params: ClaimParams
+    ) -> Result<()> {
+        check_context(&ctx)?;
+        ctx.accounts.process(params, ctx.bumps.event_sbt_edition_mint)
+    }
 
 }
 

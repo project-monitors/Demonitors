@@ -1,59 +1,53 @@
 use crate::state::*;
 use crate::error::ErrorCode;
+use crate::chain_event::*;
+
 use anchor_lang::{
     prelude::*,
     solana_program::sysvar::instructions::id as INSTRUCTIONS_ID,
 };
 use anchor_spl::{
-    token_interface::{Mint, TokenInterface },
+    token_interface::{Mint, TokenInterface, TokenAccount},
     metadata::{
         Metadata,
     },
-    metadata::mpl_token_metadata::{
-        types::{
-            TokenStandard, CollectionDetails, Creator, PrintSupply
-        },
-        instructions::{
-            CreateV1CpiBuilder
-        },
-    },
+    metadata::mpl_token_metadata::instructions::MintV1CpiBuilder,
+    associated_token::AssociatedToken,
 };
 
 
-#[derive(Clone, AnchorDeserialize, AnchorSerialize)]
-pub struct InitializeCollectionParams {
-    pub name: String,
-    pub symbol: String,
-    pub uri: String,
-}
-
-
 #[derive(Accounts)]
-#[instruction(params: InitializeCollectionParams)]
-pub struct InitializeCollection<'info> {
+pub struct MintEventSBTMasterEdition<'info> {
     #[account(
-    mut,
-    address = global_config.admin @ ErrorCode::Unauthorized)]
+    mut)]
     pub payer: Signer<'info>,
+    #[account(
+    address = global_config.governor @ ErrorCode::Unauthorized)]
+    pub governor: Signer<'info>,
     #[account(
     seeds = [GlobalConfig::GLOBAL_CONFIG_SEED],
     bump = global_config.global_config_bump)]
     pub global_config: Account<'info, GlobalConfig>,
     /// CHECK: pda
     #[account(
-    seeds = [MintConfig::AUTHORITY_SEED, &mint.key().to_bytes()],
+    seeds = [MintConfig::AUTHORITY_SEED, &collection_mint.key().to_bytes()],
     bump)]
     pub authority: UncheckedAccount<'info>,
     #[account(
+    seeds = [MintConfig::SBT_COLLECTION_SEED],
+    bump)]
+    pub collection_mint: InterfaceAccount<'info, Mint>,
+    #[account(
+    mut,
+    seeds = [MintConfig::SBT_MINT_SEED, &payer.key().to_bytes()],
+    bump)]
+    pub mint: InterfaceAccount<'info, Mint>,
+    #[account(
     init,
     payer = payer,
-    mint::decimals = 0,
-    mint::authority = authority,
-    mint::freeze_authority = authority,
-    seeds = [MintConfig::SBT_COLLECTION_SEED],
-    bump
-    )]
-    pub mint: InterfaceAccount<'info, Mint>,
+    associated_token::mint = mint,
+    associated_token::authority = authority)]
+    pub token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     /// CHECK: This is safe and will be checked by metaplex program
     #[account(
     mut,
@@ -70,55 +64,48 @@ pub struct InitializeCollection<'info> {
     #[account(address = INSTRUCTIONS_ID())]
     /// CHECK: no need to check this
     pub sysvar_instruction: UncheckedAccount<'info>, // The sysvar instruction account
-    pub rent: Sysvar<'info, Rent>,
+    pub associated_token_program: Program<'info, AssociatedToken>
 }
 
-impl<'info> InitializeCollection<'info> {
+impl<'info> MintEventSBTMasterEdition<'info> {
 
-    //noinspection RsTypeCheck
+    // noinspection RsTypeCheck
     pub fn process(
         &mut self,
-        params: InitializeCollectionParams
     ) -> Result<()> {
 
-        let (_, authority_bump ) = MintConfig::find_authority(self.mint.key());
-        let mint_key = &self.mint.key();
+        let mint = &self.mint;
+        require_eq!(mint.supply, 0, ErrorCode::MintExceedMaxSupply);
+
+        let (_, authority_bump) = MintConfig::find_authority(self.collection_mint.key());
+        let collection_mint = self.collection_mint.key();
         let signer_seeds: [&[&[u8]]; 1] = [&[
             MintConfig::AUTHORITY_SEED,
-            &mint_key.as_ref()[..],
+            &collection_mint.as_ref()[..],
             &[authority_bump],
         ]];
-        let creator = vec![
-            Creator {
-                address: self.authority.key.clone(),
-                verified: true,
-                share: 100,
-            }
-        ];
 
-        CreateV1CpiBuilder::new(&self.token_metadata_program.to_account_info())
+        MintV1CpiBuilder::new(&self.token_metadata_program.to_account_info())
+            .token(&self.token_account.to_account_info())
             .metadata(&self.metadata.to_account_info())
             .master_edition(Some(&self.master_edition.to_account_info()))
-            .mint(&self.mint.to_account_info(), false)
+            .mint(&self.mint.to_account_info())
             .authority(&self.authority.to_account_info())
             .payer(&self.payer.to_account_info())
-            .update_authority(&self.authority.to_account_info(), false)
             .system_program(&self.system_program.to_account_info())
             .sysvar_instructions(&self.sysvar_instruction.to_account_info())
             .spl_token_program(&self.token_program.to_account_info())
-            .name(params.name)
-            .symbol(params.symbol)
-            .uri(params.uri)
-            .seller_fee_basis_points(0)
-            .creators(creator)
-            .is_mutable(true)
-            .token_standard(TokenStandard::NonFungible)
-            .collection_details(CollectionDetails::V1 {size:0})
-            .decimals(0)
-            .print_supply(PrintSupply::Zero)
+            .spl_ata_program(&self.associated_token_program.to_account_info())
+            .amount(1)
             .invoke_signed(&signer_seeds)?;
 
-        Ok(())
+        emit!(
+            SBTMintEvent{
+                event_type: SBTMintEventType::MintSBT,
+                mint_key: self.mint.key(),
+                user_key: self.payer.key(),
+            });
 
+        Ok(())
     }
 }

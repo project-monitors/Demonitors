@@ -7,7 +7,7 @@ use anchor_spl::{
 use crate::state::{GlobalConfig, MintConfig};
 use crate::FT_MAX_SUPPLY;
 use crate::error::ErrorCode;
-use crate::event::balance::{BalanceChangeEvent, BalanceChangeEventType, U64ValueChange};
+use crate::chain_event::balance::{BalanceChangeEvent, BalanceChangeEventType, U64ValueChange};
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct MintTokensParams {

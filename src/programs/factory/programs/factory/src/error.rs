@@ -36,4 +36,24 @@ pub enum ErrorCode {
     UnsupportedNow,
     #[msg("Get oracle data error")]
     OracleDataError,
+    #[msg("Event is finalized")]
+    EventIsFinalized,
+    #[msg("Event is not open")]
+    EventIsNotOpen,
+    #[msg("Event is out of time for choosing")]
+    EventIsOutOfTime,
+    #[msg("Indicate to a non-existed option")]
+    IndicateToNonExistedOption,
+    #[msg("SBT which use for indicating is not found")]
+    SBTNotFound,
+    #[msg("SBT has been in use")]
+    SBTHasBeenInUse,
+    #[msg("user takes in this event already")]
+    AlreadyInEvent,
+    #[msg("user's position is not found")]
+    PositionNotFound,
+    #[msg("event is still ongoing, can not be resolved now")]
+    EventIsOngoing,
+    #[msg("event market does not have original data")]
+    EventMarketDataError,
 }

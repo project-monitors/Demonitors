@@ -16,6 +16,7 @@ pub struct MintConfig {
 impl MintConfig {
     pub const LEN: usize = 32 * 2 + 1 * 4;
     pub const MINT_SEED: &'static [u8] = b"mint";
+    pub const SBT_MINT_SEED: &'static [u8] = b"sbt_mint";
     pub const MINT_CONFIG_SEED: &'static [u8] = b"mint_config";
     pub const AUTHORITY_SEED: &'static [u8] = b"authority";
     pub const SBT_COLLECTION_SEED: &'static [u8] = b"collection";
@@ -41,6 +42,12 @@ impl MintConfig {
                 Pubkey::find_program_address(&[Self::MINT_CONFIG_SEED], &ID)
             }
         }
+    }
+
+    pub fn find_event_sbt_edition_mint_config(event_config: Pubkey, option: u8, user_key: Pubkey) -> (Pubkey, u8) {
+        Pubkey::find_program_address(
+            &[Self::SBT_MINT_SEED, event_config.as_ref(), &[option], user_key.as_ref()], &ID
+        )
     }
 
     pub fn find_authority(mint: Pubkey) -> (Pubkey, u8) {
@@ -73,4 +80,5 @@ impl MintConfig {
             )
         )
     }
+
 }

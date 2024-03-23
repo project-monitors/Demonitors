@@ -5,7 +5,7 @@ use anchor_spl::associated_token::{get_associated_token_address_with_program_id}
 use anchor_spl::token_interface::{
     Mint, TokenAccount, TokenInterface,
     TransferChecked, transfer_checked};
-use crate::event::balance::{BalanceChangeEvent, BalanceChangeEventType, U64ValueChange};
+use crate::chain_event::balance::{BalanceChangeEvent, BalanceChangeEventType, U64ValueChange};
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct VisionMiningClaimParams {

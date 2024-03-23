@@ -5,7 +5,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-factory = "EHQpL4Q8hMEsufdDR5bsSeSahqt8ShkHbxzPyGsurgR5"
+factory = "32dhe2sZpyiL5xQvUnAfTGd6unKTXYS4E3JJ2Jx1V1Gz"
 
 [registry]
 url = "https://api.apr.dev"
@@ -20,3 +20,7 @@ test = "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 [[test.genesis]]
 address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 program = "tests/metaplex_token_metadata_program.so"
+
+[[test.genesis]]
+address = "DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz"
+program = "tests/monitor.so"
