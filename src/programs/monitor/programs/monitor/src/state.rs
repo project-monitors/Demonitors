@@ -44,6 +44,7 @@ pub struct OracleData {
     pub phase: u8,
     pub raw_data: u64,
     pub decimals: u8,
+    pub previous_timestamp: u64,
     pub timestamp: u64,
     pub slot: u64,
     pub bump: u8,

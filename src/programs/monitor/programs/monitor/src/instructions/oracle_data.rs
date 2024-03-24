@@ -9,7 +9,7 @@ pub struct InitializeOracleData<'info> {
     #[account(
     init,
     payer = user,
-    space = 8 + 32 + 1 + 8 + 1 + 8 + 8 + 1,
+    space = 8 + 32 + 1 + 8 + 1 + 8 + 8 + 8 + 1,
     seeds = [b"oracle-data", config.key().as_ref()],
     bump)]
     pub oracle: Account<'info, OracleData>,
@@ -99,6 +99,7 @@ impl<'info> SetOracleData<'info> {
                 None
             } else {
                 data_account.timestamp = current_time_u64;
+                data_account.previous_timestamp = old;
                 Some(U64ValueChange {
                     old,
                     new: current_time_u64,

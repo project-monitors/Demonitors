@@ -5,22 +5,22 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-factory = "32dhe2sZpyiL5xQvUnAfTGd6unKTXYS4E3JJ2Jx1V1Gz"
+factory = "36KZHRWMKbGNsMZ2jMVuRbnMUrjzRr8kmjHyPJ9ipvFW"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "/Users/maoma/.config/solana/id.json"
 
 [scripts]
 test = "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-
-[[test.genesis]]
-address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-program = "tests/metaplex_token_metadata_program.so"
-
-[[test.genesis]]
-address = "DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz"
-program = "tests/monitor.so"
+#
+#[[test.genesis]]
+#address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+#program = "tests/metaplex_token_metadata_program.so"
+#
+#[[test.genesis]]
+#address = "12YQKMkv1xZ1B4gwVMiGTcYvY1z6TpdFvyAWyjhuC63c"
+#program = "tests/monitor.so"

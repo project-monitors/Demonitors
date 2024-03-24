@@ -9,6 +9,7 @@ use anchor_lang::prelude::*;
 
 #[derive(Clone, AnchorDeserialize, AnchorSerialize)]
 pub struct CreateEventMarketParams {
+    pub open_ts: u64,
     pub close_ts: u64,
     pub expiry_ts: u64,
 }
@@ -39,7 +40,7 @@ pub struct CreateEventMarket<'info> {
     space = 8 + EventMarket::LEN,
     seeds = [ EventMarket::EVENT_MARKET_SEED,
     &oracle_config.key().to_bytes(),
-    &event_config.index.to_be_bytes()[..]],
+    &params.open_ts.to_be_bytes()[..]],
     bump)]
     pub event_market_account: Account<'info, EventMarket>,
     pub system_program: Program<'info, System>
@@ -72,6 +73,7 @@ impl<'info> CreateEventMarket<'info> {
         market.result = 0;
         market.prize = 0;
         market.open_slot = open_slot;
+        market.open_ts = now_u64;
         market.close_ts = params.close_ts;
         market.expiry_ts = params.expiry_ts;
         market.is_opened = false;

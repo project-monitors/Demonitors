@@ -5,13 +5,13 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-monitor = "DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz"
+monitor = "12YQKMkv1xZ1B4gwVMiGTcYvY1z6TpdFvyAWyjhuC63c"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "/Users/maoma/.config/solana/id.json"
 
 [scripts]

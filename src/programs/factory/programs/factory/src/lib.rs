@@ -10,7 +10,7 @@ use instructions::*;
 use instructions::resolvers::*;
 
 
-declare_id!("32dhe2sZpyiL5xQvUnAfTGd6unKTXYS4E3JJ2Jx1V1Gz");
+declare_id!("36KZHRWMKbGNsMZ2jMVuRbnMUrjzRr8kmjHyPJ9ipvFW");
 
 pub const FT_MAX_SUPPLY: u64 = 1_000_000_000 * 1_000_000_000;
 
@@ -32,8 +32,6 @@ pub mod factory {
 
     // admin instructions
 
-    // pass
-
     pub fn initialize_global_config(
         ctx: Context<InitializeGlobalConfig>,
     ) -> Result<()> {
@@ -43,16 +41,12 @@ pub mod factory {
         Ok(())
     }
 
-    // pass
-
     pub fn change_vision_mining_admin(
         ctx: Context<ChangeVisionMiningAdmin>
     ) -> Result<()> {
         check_context(&ctx)?;
         ctx.accounts.process()
     }
-
-    // pass
 
     pub fn initialize_mint(
         ctx: Context<InitializeMint>,
@@ -62,8 +56,6 @@ pub mod factory {
         ctx.accounts.process(params)
     }
 
-    // pass
-
     pub fn mint_tokens(
         ctx: Context<MintTokens>,
         params: MintTokensParams
@@ -71,8 +63,6 @@ pub mod factory {
         check_context(&ctx)?;
         ctx.accounts.process(params)
     }
-
-    // pass
 
     pub fn initialize_collection(
         ctx: Context<InitializeCollection>,
@@ -84,8 +74,6 @@ pub mod factory {
 
     // privilege instructions:
 
-    // pass
-
     pub fn vision_mining_claim(
         ctx: Context<VisionMiningClaim>,
         params: VisionMiningClaimParams
@@ -93,8 +81,6 @@ pub mod factory {
         check_context(&ctx)?;
         ctx.accounts.process(params)
     }
-
-    // pass
 
     pub fn create_event_config(
         ctx: Context<CreateEventConfig>,
@@ -104,7 +90,6 @@ pub mod factory {
         ctx.accounts.process(params, ctx.bumps.event_config)
     }
 
-    // pass
     pub fn create_event_market(
         ctx: Context<CreateEventMarket>,
         params: CreateEventMarketParams
@@ -114,16 +99,15 @@ pub mod factory {
     }
 
 
-    // pass
     pub fn toggle_event_market(
         ctx: Context<ToggleEventMarket>,
+        params: ToggleEventMarketParams
     ) -> Result<()> {
         check_context(&ctx)?;
-        ctx.accounts.process()
+        ctx.accounts.process(params)
     }
 
 
-    // pass
     pub fn create_event_sbt(
         ctx: Context<CreateEventSBT>,
         params: CreateEventSBTParams
@@ -132,7 +116,6 @@ pub mod factory {
         ctx.accounts.process(params, ctx.bumps.mint, ctx.bumps.authority)
     }
 
-    // pass
     pub fn mint_event_sbt_master_edition(
         ctx: Context<MintEventSBTMasterEdition>,
         params: MintEventSBTMasterEditionParams
@@ -141,7 +124,6 @@ pub mod factory {
         ctx.accounts.process(params)
     }
 
-    // pass
     pub fn resolve(
         ctx: Context<FearAndGreedEventMarketResolve>,
         params: FearAndGreedEventMarketResolveParams
@@ -152,7 +134,6 @@ pub mod factory {
 
     // public instructions:
 
-    // pass
     pub fn create_sbt(
         ctx: Context<CreateSBT>,
         params: CreateSBTParams
@@ -161,7 +142,6 @@ pub mod factory {
         ctx.accounts.process(params, ctx.bumps.mint)
     }
 
-    //pass
     pub fn mint_sbt(
         ctx: Context<MintSBT>
     ) -> Result<()> {
@@ -169,7 +149,6 @@ pub mod factory {
         ctx.accounts.process()
     }
 
-    //pass
     pub fn choose(
         ctx: Context<Choose>,
         params: ChooseParams
@@ -178,7 +157,6 @@ pub mod factory {
         ctx.accounts.process(params)
     }
 
-    // pass
     pub fn withdraw(
         ctx: Context<Withdraw>,
         params: WithdrawParams
@@ -186,7 +164,6 @@ pub mod factory {
         check_context(&ctx)?;
         ctx.accounts.process(params)
     }
-
 
     pub fn claim(
         ctx: Context<Claim>,

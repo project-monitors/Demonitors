@@ -5,11 +5,54 @@
 
 ## Programs
 
-### 前端对接故事
+### stories
 
-- 1. 获取景观数据：读取OracleData Account中的数据
+- 1. 获取景观数据当前数据用于美术渲染：读取OracleData Account中的数据， raw_data
+- 2. 获取景观的历史数据：slot（块高）/ timestamp来看， 一天会有一次数据更新。 getAccountInfoAtSlot
+- 3. 获取市场：一个景观对应一个OracleConfig，对应一个OracleData，对应一个EventConfig。
+     eventconfig中有个index（后期改成UTC-0点时间戳），这是目前实例化了多少个市场，从0开始。（2能用）
+     eventmarket是有eventconfig + UTC-0点时间戳 PDA出来的。
+     后天和大后天的预测场次判断逻辑需要明确。
+- 4. 主SBT Mint： 200000 CP Units
+     create_sbt(string + user_pubkey), mint_sbt
+     Marker（用来记录SBT的使用）
+- 5. 选择一个market，选择一个option，用sbt下注/撤注  产生pda：user_position和event_position。
+- 6. 通过event_position查看某个market的下注情况
+- 7. claim，三种结果（增加CP Unit）：ClaimWithNonPrize, ClaimWithPrize, ClaimWithPrizeAndSBT
 
-### miner
+metaplex NFT有几个Account：
+
+spl 模型：
+1. mint account
+2. token account(user account 的ATA)
+
+metaplex
+1. metadata： 记录NFT的URL，symbol这些；
+2. master_edition：（Prints）无副本/有限副本/无限副本
+3. edition：副本
+
+SBT
+1. spl 2022 的mint account（82个bytes） + Extension（不确定的字节数）
+   non-transferable 170个bytes
+2. token account(user account 的ATA)
+
+主SBT，每个SBT都是一个master_edition。因为metadata里的数据是不一样，至少美术方面的traits。
+event SBT，一共两个master_edition（对应恐惧和贪婪），每个人拿的是print的edition。
+
+FT：
+Mint唯一
+
+
+
+### factory
+
+#### Accounts
+
+##### GlobalConfig
+
+###### pda
+
+
 
 - vote account 可以创建deposit pool account
   - pool account 可以创建stake account和mint account

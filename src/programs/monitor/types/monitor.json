@@ -205,7 +205,15 @@
             "type": "u8"
           },
           {
+            "name": "previousTimestamp",
+            "type": "u64"
+          },
+          {
             "name": "timestamp",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
             "type": "u64"
           },
           {
@@ -356,6 +364,6 @@
     }
   ],
   "metadata": {
-    "address": "DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz"
+    "address": "12YQKMkv1xZ1B4gwVMiGTcYvY1z6TpdFvyAWyjhuC63c"
   }
 }

@@ -9,9 +9,8 @@ import {
     getAssociatedTokenAddress,
     TOKEN_2022_PROGRAM_ID,
     getMintLen,
-    ExtensionType, transfer
+    ExtensionType,
 } from "@solana/spl-token";
-import {reverseSerializer} from "@metaplex-foundation/umi";
 
 
 describe("factory", () => {
@@ -32,7 +31,7 @@ describe("factory", () => {
     const MPL_TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey(
         "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
     const MONITOR_PROGRAM_ID = new anchor.web3.PublicKey(
-        "DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz")
+        "12YQKMkv1xZ1B4gwVMiGTcYvY1z6TpdFvyAWyjhuC63c")
     const EDITION_MARKER_BIT_SIZE = 248;
 
 
@@ -116,14 +115,14 @@ describe("factory", () => {
         return {account_pubkey, bump}
     }
 
-    const get_event_market = (config_pubkey: anchor.web3.PublicKey, index: anchor.BN): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
-        const indexBuffer= index.toBuffer('be', 8);
+    const get_event_market = (config_pubkey: anchor.web3.PublicKey, timestamp: anchor.BN): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+        const timestampBuffer= timestamp.toBuffer('be', 8);
 
         const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
             [
                 Buffer.from("event_market"),
                 config_pubkey.toBuffer(),
-                indexBuffer
+                timestampBuffer
             ],
             program.programId
         );
@@ -251,6 +250,14 @@ describe("factory", () => {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    function getUTCMidnightTimestamp(): number {
+        const now = new Date();
+        const utcMidnight = new Date(
+            Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0)
+        );
+        return Math.floor(utcMidnight.getTime() / 1000);
+    }
+
 
     const existed_global_config_pubkey = get_pda(GLOBAL_CONFIG_SEED).account_pubkey;
     const existed_config_name = "22QVCPu62x2Z3abSdgHzpU4PyFttu9u";
@@ -301,8 +308,8 @@ describe("factory", () => {
             }).rpc();
         console.log("Change vision mining admin signature: ", tx);
         const old_admin_pubkey =
-            new anchor.web3.PublicKey("BH1VCRN52ZZeuedMkEukJDiZK58sjMzcRbYw7cADHQyg");
-        //     new anchor.web3.PublicKey("9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG");
+            // new anchor.web3.PublicKey("BH1VCRN52ZZeuedMkEukJDiZK58sjMzcRbYw7cADHQyg");
+            new anchor.web3.PublicKey("9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG");
         console.log("Change vision mining admin back to: ", old_admin_pubkey)
         tx = await program.methods.changeVisionMiningAdmin()
             .accounts({
@@ -549,7 +556,7 @@ describe("factory", () => {
             user: wallet.publicKey,
             authorityPubkey: wallet.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-        }).rpc();
+        }).rpc().catch(e => console.error(e));
         console.log("Create oracle config signature", tx);
 
         console.log("Create oracle data account: ", existed_data_data.account_pubkey.toBase58())
@@ -559,11 +566,11 @@ describe("factory", () => {
                 user: wallet.publicKey,
                 systemProgram: anchor.web3.SystemProgram.programId,
             }
-        ).rpc();
+        ).rpc().catch(e=>console.error(e));
         console.log("Create oracle data signature", tx);
 
         const phase = 1;
-        const raw_data = new anchor.BN(83);
+        const raw_data = new anchor.BN(74);
         const decimals = 0
 
         console.log("Set oracle data.")
@@ -628,17 +635,18 @@ describe("factory", () => {
         console.log("Governor account: ", governor.publicKey.toBase58());
         const resolver_pubkey = wallet.publicKey;
         console.log("Resolver account: ", resolver_pubkey.toBase58());
-        const event_config_account = await program.account.eventConfig.fetch(event_config_pubkey);
-        const index = event_config_account.index;
-        console.log("Index: ", index);
-        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        const utc0_today = getUTCMidnightTimestamp();
+        // for test only
+        // const utc0_tomorrow =  Math.floor((new Date()).getTime() / 1000) + 6;
+        const utc0_tomorrow = utc0_today + 86400;
+        const open_ts = new anchor.BN(utc0_today);
+        const close_ts = new anchor.BN(utc0_tomorrow);
+        const event_market_pubkey = get_event_market(existed_config_pubkey,open_ts).account_pubkey;
         console.log("Event data account: ", event_market_pubkey.toBase58());
-        let now = new Date();
-        now.setSeconds(now.getSeconds() + 6);
-        const unixTimestampInSeconds = Math.floor((now.getTime() / 1000));
         let transaction = await program.methods.createEventMarket({
-            closeTs: new anchor.BN(unixTimestampInSeconds),
-            expiryTs: new anchor.BN(unixTimestampInSeconds)
+            openTs: open_ts,
+            closeTs: close_ts,
+            expiryTs: close_ts
         })
             .accounts({
                 payer: wallet.publicKey,
@@ -775,7 +783,7 @@ describe("factory", () => {
     });
 
     it("Should: I. Create Event Master Edition SBT", async () => {
-        let option = 1;
+        let option = 2;
         const mint_pubkey = get_sbt_event_mint(event_config_pubkey, option).account_pubkey;
         console.log("Mint account: ", mint_pubkey.toBase58())
         const metadata_pubkey = get_metadata(mint_pubkey).account_pubkey;
@@ -790,7 +798,7 @@ describe("factory", () => {
             name: "Monitor SBT",
             symbol: "SBT",
             uri: "monitocol.xyz",
-            option: 1
+            option: option
         };
         if (existed_mint_account_info === null) {
             console.log("[ONCE] Create Event Master Edition SBT for option", option);
@@ -825,7 +833,7 @@ describe("factory", () => {
     });
 
     it("Should: II. Mint Event Master Edition SBT", async () => {
-        let option = 1;
+        let option = 2;
         const mint_pubkey = get_sbt_event_mint(event_config_pubkey, option).account_pubkey;
         console.log("Mint account: ", mint_pubkey.toBase58())
         const metadata_pubkey = get_metadata(mint_pubkey).account_pubkey;
@@ -877,18 +885,22 @@ describe("factory", () => {
     });
 
     it("Should: toggle event market", async () => {
-        const index = new anchor.BN(0);
-        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
+        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
         console.log("Event market pubkey: ", event_market_pubkey.toBase58());
         const subscriptionId = program.addEventListener("EventEvent", (event, slot) => {
             console.log('Event data:', event);
             console.log('Slot:', slot);
         });
-        let transaction = await program.methods.toggleEventMarket()
+        let transaction = await program.methods.toggleEventMarket(
+            {toggle: true,
+            fetchOracleData: false}
+        )
             .accounts({
                 payer: wallet.publicKey,
                 governor: wallet.publicKey,
                 globalConfig: existed_global_config_pubkey,
+                oracleData: existed_data_data.account_pubkey,
                 eventConfig: event_config_pubkey,
                 eventMarketAccount: event_market_pubkey
             }).transaction();
@@ -900,9 +912,9 @@ describe("factory", () => {
     });
 
     it("Should: choose", async () => {
-        const index = new anchor.BN(0);
-        const indicate = 1;
-        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
+        const indicate = 2;
+        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
         console.log("Event market pubkey: ", event_market_pubkey.toBase58());
         const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
         console.log("SBT mint pubkey: ", sbt_mint.toBase58());
@@ -942,9 +954,9 @@ describe("factory", () => {
     });
 
     it("Should: withdraw", async () => {
-        const index = new anchor.BN(0);
-        const indicate = 1;
-        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
+        const indicate = 2;
+        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
         console.log("Event market pubkey: ", event_market_pubkey.toBase58());
         const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
         console.log("SBT mint pubkey: ", sbt_mint.toBase58());
@@ -997,7 +1009,7 @@ describe("factory", () => {
     it("Should: resolve", async () => {
         console.log("Set oracle new data.");
         const phase = 1;
-        const raw_data = new anchor.BN(80);
+        const raw_data = new anchor.BN(92);
         const decimals = 0
 
         let tx = await monitor_program.methods.setOracleData(
@@ -1014,8 +1026,8 @@ describe("factory", () => {
         await sleep(5000);
         console.log('Resolve event market.')
         const prize = new anchor.BN(30000000000);
-        const index = new anchor.BN(0);
-        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
+        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
         console.log("Event market pubkey: ", event_market_pubkey.toBase58());
         const subscriptionId = program.addEventListener("EventEvent", (event, slot) => {
             console.log('Event data:', event);
@@ -1066,8 +1078,8 @@ describe("factory", () => {
         console.log("Mint token to event mining token account signature: ", tx);
 
         console.log("User claim prize")
-        const index = new anchor.BN(0);
-        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
+        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
         console.log("Event market pubkey: ", event_market_pubkey.toBase58())
         const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
         console.log("SBT mint pubkey: ", sbt_mint.toBase58());
@@ -1079,7 +1091,7 @@ describe("factory", () => {
             mint, wallet.publicKey, true,
             TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
         console.log("User FT token account pubkey: ", token_account.toBase58());
-        let indicate = 1;
+        let indicate = 2;
         const event_sbt_edition_mint = get_sbt_event_edition_mint(
             event_config_pubkey, indicate, wallet.publicKey).account_pubkey;
         console.log("Event sbt edition mint pubkey: ", event_sbt_edition_mint.toBase58());
