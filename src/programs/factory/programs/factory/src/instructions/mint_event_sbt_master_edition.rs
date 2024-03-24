@@ -15,8 +15,13 @@ use anchor_spl::{
     associated_token::AssociatedToken,
 };
 
+#[derive(Clone, AnchorDeserialize, AnchorSerialize)]
+pub struct MintEventSBTMasterEditionParams {
+    pub option: u8,
+}
 
 #[derive(Accounts)]
+#[instruction(params: MintEventSBTMasterEditionParams)]
 pub struct MintEventSBTMasterEdition<'info> {
     #[account(
     mut)]
@@ -28,6 +33,7 @@ pub struct MintEventSBTMasterEdition<'info> {
     seeds = [GlobalConfig::GLOBAL_CONFIG_SEED],
     bump = global_config.global_config_bump)]
     pub global_config: Account<'info, GlobalConfig>,
+    pub event_config: Account<'info, EventConfig>,
     /// CHECK: pda
     #[account(
     seeds = [MintConfig::AUTHORITY_SEED, &collection_mint.key().to_bytes()],
@@ -39,7 +45,10 @@ pub struct MintEventSBTMasterEdition<'info> {
     pub collection_mint: InterfaceAccount<'info, Mint>,
     #[account(
     mut,
-    seeds = [MintConfig::SBT_MINT_SEED, &payer.key().to_bytes()],
+    seeds = [
+    MintConfig::SBT_MINT_SEED,
+    &event_config.key().to_bytes(),
+    &[params.option]],
     bump)]
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(
@@ -72,6 +81,7 @@ impl<'info> MintEventSBTMasterEdition<'info> {
     // noinspection RsTypeCheck
     pub fn process(
         &mut self,
+        _params: MintEventSBTMasterEditionParams
     ) -> Result<()> {
 
         let mint = &self.mint;

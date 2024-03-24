@@ -44,7 +44,8 @@ pub struct Withdraw<'info> {
 impl<'info> Withdraw<'info> {
 
     pub fn process(
-        &mut self
+        &mut self,
+        _params: WithdrawParams
     ) -> Result<()> {
 
         let marker = &mut self.marker;

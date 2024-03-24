@@ -12,7 +12,7 @@ use anchor_spl::{
         mpl_token_metadata::instructions::PrintV1CpiBuilder,
     },
     token_interface::{Mint, TokenAccount, TokenInterface, transfer_checked, TransferChecked,
-                      spl_token_2022::instruction::{initialize_mint, initialize_non_transferable_mint}}
+                      spl_token_2022::instruction::{initialize_mint2, initialize_non_transferable_mint}}
 };
 use anchor_spl::associated_token::AssociatedToken;
 
@@ -41,27 +41,28 @@ pub struct Claim<'info> {
     #[account(
     seeds = [GlobalConfig::GLOBAL_CONFIG_SEED],
     bump = global_config.global_config_bump)]
-    pub global_config: Account<'info, GlobalConfig>,
+    pub global_config: Box<Account<'info, GlobalConfig>>,
 
     // event accounts
     #[account(
     address = event_market.event_config @ ErrorCode::UnexpectedAccount)]
-    pub event_config: Account<'info, EventConfig>,
+    pub event_config: Box<Account<'info, EventConfig>>,
     #[account(
     constraint = event_market.result != 0 @ ErrorCode::EventIsOngoing)]
-    pub event_market: Account<'info, EventMarket>,
+    pub event_market: Box<Account<'info, EventMarket>>,
     #[account(
     mut,
-    constraint = marker.indicate == params.indicate @ ErrorCode::InvalidArgument,
-    seeds = [Marker::MARKER_SEED, &payer.key().to_bytes(), &params.sbt_mint.to_bytes()],
-    bump)]
-    pub marker: Account<'info, Marker>,
+    constraint = marker.indicate == *&params.indicate @ ErrorCode::InvalidArgument)]
+    pub marker: Box<Account<'info, Marker>>,
+    // #[account(
+    // mut,
+    // close = payer)]
     #[account(
     mut,
     close = payer,
     seeds = [UserPosition::POSITION_SEEDS, &event_market.key().to_bytes(), &payer.key().to_bytes()],
     bump)]
-    pub user_position: Account<'info, UserPosition>,
+    pub user_position: Box<Account<'info, UserPosition>>,
 
     // FT token accounts
     #[account(
@@ -79,6 +80,8 @@ pub struct Claim<'info> {
     #[account(
     address = global_config.event_mining_pda)]
     pub event_mining_pda: UncheckedAccount<'info>,
+    // #[account(
+    // mut)]
     #[account(
     mut,
     address = get_ata(&event_mining_pda.key(), &mint.key(), &token_program.key()))]
@@ -87,26 +90,25 @@ pub struct Claim<'info> {
     // SBT edition account
     /// CHECK: create token 2022 mint manually
     #[account(
-    mut,
-    seeds = [MintConfig::SBT_MINT_SEED,
-    &event_config.key().to_bytes(),
-    &[params.indicate],
-    &payer.key().to_bytes()],
-    bump)]
+    mut)]
     pub event_sbt_edition_mint: UncheckedAccount<'info>,
     /// CHECK: This is safe and will be checked and created by metaplex program
+    // #[account(mut)]
     #[account(
     mut,
     address = get_ata(&payer.key(), &event_sbt_edition_mint.key(), &token_program.key()))]
     pub event_sbt_edition_token_account:UncheckedAccount<'info>,
     /// CHECK: This is safe and will be checked by metaplex program
+    // #[account(mut)]
     #[account(
     mut,
-    address = MintConfig::find_metadata(mint.key())?.0 @ ErrorCode::UnexpectedAccount)]
+    address = MintConfig::find_metadata(event_sbt_edition_mint.key())?.0 @ ErrorCode::UnexpectedAccount)]
     pub event_sbt_edition_metadata: UncheckedAccount<'info>,
     /// CHECK: This is safe and will be checked by metaplex program
+    // #[account(mut)]
     #[account(
-    mut)]
+    mut,
+    address = MintConfig::find_master_edition(event_sbt_edition_mint.key())?.0 @ ErrorCode::UnexpectedAccount)]
     pub event_sbt_edition: UncheckedAccount<'info>,
     /// CHECK: This is safe and will be checked by metaplex program
     #[account(
@@ -118,17 +120,14 @@ pub struct Claim<'info> {
     pub authority: UncheckedAccount<'info>,
     pub collection_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
-    mut,
-    seeds = [
-    MintConfig::SBT_MINT_SEED,
-    &event_config.key().to_bytes(),
-    &[params.indicate]],
-    bump)]
+    mut)]
     pub event_sbt_master_edition_mint: Box<InterfaceAccount<'info, Mint>>,
     pub event_sbt_master_edition_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     /// CHECK: This is safe and will be checked by metaplex program
     pub event_sbt_master_edition_metadata: UncheckedAccount<'info>,
     /// CHECK: This is safe and will be checked by metaplex program
+    // #[account(
+    // mut)]
     #[account(
     mut,
     address = MintConfig::find_master_edition(event_sbt_master_edition_mint.key())?.0 @ ErrorCode::UnexpectedAccount)]
@@ -159,6 +158,8 @@ impl<'info> Claim<'info> {
         ).0;
         require_eq!(params.sbt_mint, sbt_mint, ErrorCode::InvalidArgument);
         require_neq!(self.user_position.existed, false, ErrorCode::PositionNotFound);
+        let marker = Marker::find_marker_account(self.payer.key(), sbt_mint).0;
+        require_keys_eq!(marker, self.marker.key(), ErrorCode::UnexpectedAccount);
         Ok(())
     }
 
@@ -176,8 +177,7 @@ impl<'info> Claim<'info> {
 
     pub fn process(
         &mut self,
-        params: ClaimParams,
-        event_sbt_mint_bump: u8
+        params: ClaimParams
     ) -> Result<()> {
         let indicate = params.indicate;
 
@@ -187,6 +187,12 @@ impl<'info> Claim<'info> {
         marker.indicate = 0;
 
         if indicate != self.event_market.result {
+            emit!(ChooseEvent{
+                event_type: ChooseEventType::ClaimWithNonPrize,
+                event_market: self.event_market.key(),
+                user_key: self.payer.key(),
+                indicate
+            });
             return Ok(())
         } else {
             // Transfer tokens
@@ -227,16 +233,17 @@ impl<'info> Claim<'info> {
             let sbt_edition_mint_ai = self.event_sbt_edition_mint.to_account_info();
             let data_len = sbt_edition_mint_ai.data.borrow().len();
             if data_len == 0 {
-                msg!("This mint account doesn't existed");
 
                 let collection_mint_key = self.collection_mint.key();
                 let (authority_key, authority_bump) = MintConfig::find_authority(collection_mint_key);
                 require_keys_eq!(authority_key, self.authority.key(), ErrorCode::UnexpectedAccount);
 
-
+                let event_config_key = self.event_config.key();
+                let payer_key = self.payer.key();
+                let (_,event_sbt_mint_bump) = MintConfig::find_event_sbt_edition_mint_config(
+                    event_config_key, indicate.clone(), payer_key);
 
                 let payer_ai = self.payer.to_account_info();
-                let rent_ai = self.rent.to_account_info();
 
                 let size: usize = 170;
                 let lamports = Rent::get()?.minimum_balance(size);
@@ -252,7 +259,7 @@ impl<'info> Claim<'info> {
                 // 1. create mint account
                 let create_account_ix = create_account(
                     &self.payer.key(),
-                    &self.mint.key(),
+                    &self.event_sbt_edition_mint.key(),
                     lamports,
                     170,
                     &self.token_program.key(),
@@ -262,7 +269,7 @@ impl<'info> Claim<'info> {
                     &create_account_ix,
                     &[
                         payer_ai.clone(),
-                        sbt_edition_mint_ai.clone(),
+                        sbt_edition_mint_ai.clone()
                     ],
                     &signer_seeds
                 )?;
@@ -270,7 +277,7 @@ impl<'info> Claim<'info> {
                 // 2. initialize non transferable extensions
                 let init_non_transferable_ix = initialize_non_transferable_mint(
                     &self.token_program.key(),
-                    &self.mint.key(),
+                    &self.event_sbt_edition_mint.key(),
                 )?;
 
                 invoke(
@@ -281,9 +288,9 @@ impl<'info> Claim<'info> {
                 )?;
 
                 // 3. initialize the mint
-                let initialize_mint_ix = initialize_mint(
+                let initialize_mint_ix = initialize_mint2(
                     &self.token_program.key(),
-                    &self.mint.key(),
+                    &self.event_sbt_edition_mint.key(),
                     &self.authority.key(),
                     Some(&self.authority.key()),
                     0
@@ -293,7 +300,6 @@ impl<'info> Claim<'info> {
                     &initialize_mint_ix,
                     &[
                         sbt_edition_mint_ai.clone(),
-                        rent_ai.clone(),
                     ]
                 )?;
 
@@ -330,6 +336,19 @@ impl<'info> Claim<'info> {
                     event_type: SBTMintEventType::PrintSBT,
                     mint_key: self.event_sbt_edition_mint.key(),
                     user_key: self.payer.key(),
+                });
+                emit!(ChooseEvent{
+                    event_type: ChooseEventType::ClaimWithPrizeAndSBT,
+                    event_market: self.event_market.key(),
+                    user_key: self.payer.key(),
+                    indicate
+                });
+            } else {
+                emit!(ChooseEvent{
+                    event_type: ChooseEventType::ClaimWithPrize,
+                    event_market: self.event_market.key(),
+                    user_key: self.payer.key(),
+                    indicate
                 });
             }
         }

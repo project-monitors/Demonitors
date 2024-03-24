@@ -2,14 +2,6 @@ use anchor_lang::prelude::*;
 use crate::ID;
 
 
-#[derive(PartialEq, Clone, AnchorDeserialize, AnchorSerialize)]
-pub enum EventMarketType {
-    RawDataEventMarket,
-    PhaseEventMarket,
-    NonPredictEventMarket,
-}
-
-
 #[account]
 pub struct EventMarket {
     pub event_config: Pubkey,

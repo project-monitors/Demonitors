@@ -103,7 +103,8 @@ impl<'info> CreateEventSBT<'info> {
         require!(params.option <= self.event_config.option, ErrorCode::InvalidArgument);
         let signer_seeds: [&[&[u8]]; 1] = [&[
             MintConfig::SBT_MINT_SEED,
-            &self.payer.key().to_bytes(),
+            &self.event_config.key().to_bytes(),
+            &[params.option],
             &[bump],
         ]];
 

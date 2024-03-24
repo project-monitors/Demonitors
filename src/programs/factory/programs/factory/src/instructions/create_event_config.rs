@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 
 #[derive(Clone, AnchorDeserialize, AnchorSerialize)]
 pub struct CreateEventConfigParams {
-    pub event_type: EventMarketType,
+    pub event_type: EventType,
     pub option: u8,
     pub metadata_json_url: String
 }
@@ -44,7 +44,7 @@ impl<'info> CreateEventConfig<'info> {
         bump: u8
     ) -> Result<()> {
         //TODO: support new chain_event type
-        require!(params.event_type == EventMarketType::RawDataEventMarket, ErrorCode::UnsupportedNow);
+        require!(params.event_type == EventType::RawDataEventMarket, ErrorCode::UnsupportedNow);
         let event_config = &mut self.event_config;
         event_config.metadata_json_url = UriResource::validate(&params.metadata_json_url)?;
         event_config.creator = self.payer.key();

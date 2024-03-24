@@ -9,8 +9,9 @@ import {
     getAssociatedTokenAddress,
     TOKEN_2022_PROGRAM_ID,
     getMintLen,
-    ExtensionType
+    ExtensionType, transfer
 } from "@solana/spl-token";
+import {reverseSerializer} from "@metaplex-foundation/umi";
 
 
 describe("factory", () => {
@@ -32,6 +33,7 @@ describe("factory", () => {
         "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
     const MONITOR_PROGRAM_ID = new anchor.web3.PublicKey(
         "DQtL5gnrsA1e6vXrFSCTU87DHj6MBmHoZoL3bsh4uFPz")
+    const EDITION_MARKER_BIT_SIZE = 248;
 
 
     const get_pda = (name: string): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
@@ -103,11 +105,25 @@ describe("factory", () => {
         return {account_pubkey, bump}
     }
 
-    const get_event_market = (config_pubkey: anchor.web3.PublicKey): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+    const get_event_config = (config_pubkey: anchor.web3.PublicKey): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+        const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+            [
+                Buffer.from("event"),
+                config_pubkey.toBuffer(),
+            ],
+            program.programId
+        );
+        return {account_pubkey, bump}
+    }
+
+    const get_event_market = (config_pubkey: anchor.web3.PublicKey, index: anchor.BN): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+        const indexBuffer= index.toBuffer('be', 8);
+
         const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
             [
                 Buffer.from("event_market"),
                 config_pubkey.toBuffer(),
+                indexBuffer
             ],
             program.programId
         );
@@ -125,54 +141,131 @@ describe("factory", () => {
         return {account_pubkey, bump}
     }
 
+    const get_sbt_event_mint = (event_config: anchor.web3.PublicKey, option: number): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+        const option_BN = new anchor.BN(option);
+        const option_buffer = option_BN.toBuffer('be', 1);
+        const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+            [
+                Buffer.from("sbt_mint"),
+                event_config.toBuffer(),
+                option_buffer
+            ],
+            program.programId
+        );
+        return {account_pubkey, bump}
+    }
+
+    const get_sbt_event_edition_mint = (event_config: anchor.web3.PublicKey, option: number, user_pubkey: anchor.web3.PublicKey): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+        const option_BN = new anchor.BN(option);
+        const option_buffer = option_BN.toBuffer('be', 1);
+        const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+            [
+                Buffer.from("sbt_mint"),
+                event_config.toBuffer(),
+                option_buffer,
+                user_pubkey.toBuffer(),
+            ],
+            program.programId
+        );
+        return {account_pubkey, bump}
+    }
+
+    const get_edition_mark_pda = (master_edition_mint: anchor.web3.PublicKey, edition: number): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+        let editionNumber = new anchor.BN(Math.floor(edition/EDITION_MARKER_BIT_SIZE));
+        const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync([
+            Buffer.from("metadata"),
+            MPL_TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+            master_edition_mint.toBuffer(),
+            Buffer.from("edition"),
+            Buffer.from(editionNumber.toString())
+            ], MPL_TOKEN_METADATA_PROGRAM_ID
+        )
+        return {account_pubkey, bump}
+    }
+
     const get_marker = (
         user_pubkey: anchor.web3.PublicKey,
-        event_market_pubkey: anchor.web3.PublicKey | null): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
-        if (event_market_pubkey === null) {
+        sbt_mint_pubkey: anchor.web3.PublicKey): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
             const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
                 [
                     Buffer.from("marker"),
                     user_pubkey.toBuffer(),
+                    sbt_mint_pubkey.toBuffer(),
                 ],
                 program.programId
             );
             return {account_pubkey, bump}
-        } else {
-            const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
-                [
-                    Buffer.from("marker"),
-                    user_pubkey.toBuffer(),
-                    event_market_pubkey.toBuffer(),
-                ],
-                program.programId
-            );
-            return {account_pubkey, bump}
-        }
     }
+
+    const get_user_position = (
+        event_market_pubkey: anchor.web3.PublicKey,
+        user_pubkey: anchor.web3.PublicKey): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+        const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+            [
+                Buffer.from("user_position"),
+                event_market_pubkey.toBuffer(),
+                user_pubkey.toBuffer(),
+            ],
+            program.programId
+        );
+        return {account_pubkey, bump}
+    }
+
+    const get_event_position = (
+        event_market_pubkey: anchor.web3.PublicKey,
+        option_index: number): { account_pubkey: anchor.web3.PublicKey, bump: number } => {
+        const option_bn = new anchor.BN(option_index);
+        const option_buffer = option_bn.toBuffer("be", 1)
+        const [account_pubkey, bump] = anchor.web3.PublicKey.findProgramAddressSync(
+            [
+                Buffer.from("event_position"),
+                event_market_pubkey.toBuffer(),
+                option_buffer
+            ],
+            program.programId
+        );
+        return {account_pubkey, bump}
+    }
+
+    async function sign_with_governor(transaction: anchor.web3.Transaction, governor_keypair: anchor.web3.Keypair) {
+        let latestBlockHash = await provider.connection.getLatestBlockhash();
+        transaction.recentBlockhash = latestBlockHash.blockhash;
+        transaction.feePayer = wallet.publicKey;
+        transaction.partialSign(wallet.payer);
+        transaction.partialSign(governor_keypair);
+
+        const txId = await provider.sendAndConfirm(transaction).catch(e => console.error(e));
+        console.log("Transaction signature: ", txId);
+
+        latestBlockHash = await provider.connection.getLatestBlockhash();
+
+        // @ts-ignore
+        await provider.connection.confirmTransaction({
+                blockhash: latestBlockHash.blockhash,
+                lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+                signature: txId},
+            "confirmed" );
+    }
+
+    async function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
 
     const existed_global_config_pubkey = get_pda(GLOBAL_CONFIG_SEED).account_pubkey;
-
-    function getMintAuthority(accountInfo: anchor.web3.AccountInfo<Buffer>): anchor.web3.PublicKey | null {
-        if (!accountInfo.data) {
-            throw new Error('Account data is missing');
-        }
-
-        // 确保缓冲区足够大，可以包含 mintAuthorityOption 和 mintAuthority
-        if (accountInfo.data.length < 1 + 32) {
-            throw new Error('Invalid mint account data');
-        }
-
-        // 解析 mintAuthorityOption
-        const mintAuthorityOption = accountInfo.data[0];
-
-        // 如果 mintAuthorityOption 是 1，代表存在 mintAuthority
-        if (mintAuthorityOption === 1) {
-            return new anchor.web3.PublicKey(accountInfo.data.slice(1, 33));
-        }
-
-        // 如果 mintAuthorityOption 不是 1，则没有 mintAuthority
-        return null;
-    }
+    const existed_config_name = "22QVCPu62x2Z3abSdgHzpU4PyFttu9u";
+    const existed_config_pubkey = get_oracle_config(existed_config_name).account_pubkey;
+    console.log("Oracle config account: ", existed_config_pubkey.toBase58());
+    const existed_data_data = get_oracle_data(existed_config_pubkey);
+    console.log("Oracle data account: ", existed_data_data.account_pubkey.toBase58());
+    const collection_mint_pubkey = get_pda(SBT_COLLECTION_SEED).account_pubkey;
+    console.log("Collection mint account: ", collection_mint_pubkey.toBase58());
+    const collection_metadata_pubkey = get_metadata(collection_mint_pubkey).account_pubkey;
+    console.log("Collection metadata account: ", collection_metadata_pubkey.toBase58());
+    const collection_master_edition_pubkey = get_master_edition(collection_mint_pubkey).account_pubkey;
+    console.log("Collection master edition account: ", collection_master_edition_pubkey.toBase58());
+    const event_config_pubkey = get_event_config(existed_config_pubkey).account_pubkey;
+    console.log("Event config account: ", event_config_pubkey.toBase58());
 
 
     it("Should: The global config account is initialized!", async () => {
@@ -440,12 +533,9 @@ describe("factory", () => {
         }
     });
 
-    it("Should: Create Event Market", async () => {
+    it("Should: Create Event Config", async () => {
 
         console.log("Preparing oracle config and oracle data...");
-        const existed_config_name = "22QVCPu62x2Z3abSdgHzpU4PyFttu9u";
-        const existed_config_pubkey = get_oracle_config(existed_config_name).account_pubkey;
-        const existed_data_data = get_oracle_data(existed_config_pubkey);
         const short_description = "This is a description.";
         const total_phase = 2;
 
@@ -490,57 +580,78 @@ describe("factory", () => {
         console.log('Set oracle data signature: ', tx);
 
         console.log("Create chain_event market chain_event subscriber.")
-        const subscriptionId = program.addEventListener("EventMarketEvent", (event, slot) => {
+        const subscriptionId = program.addEventListener("EventEvent", (event, slot) => {
             console.log('Event data:', event);
             console.log('Slot:', slot);
         });
 
-        console.log("Create chain_event market now.")
+        console.log("Create event config now.")
         const governor = wallet.payer;
         console.log("Governor account: ", governor.publicKey.toBase58());
-        const resolver = wallet.publicKey;
-        console.log("Resolver account: ", governor.publicKey.toBase58());
-        const event_market_pubkey = get_event_market(existed_config_pubkey).account_pubkey;
-        let now = new Date();
-        now.setMinutes(now.getSeconds() + 120);
-        const unixTimestampInSeconds = Math.floor((now.getTime() / 1000));
+        const resolver_pubkey = wallet.publicKey;
+        console.log("Resolver account: ", resolver_pubkey.toBase58());
         const metadata_json_url = "https://monitocol.xyz";
-        let transaction = await program.methods.createEventMarket({
+        let transaction = await program.methods.createEventConfig({
             eventType: {rawDataEventMarket:{}},
             option: 2,
-            closeTs: new anchor.BN(unixTimestampInSeconds),
-            expiryTs: new anchor.BN(unixTimestampInSeconds),
             metadataJsonUrl: metadata_json_url,
         })
             .accounts({
                 payer: wallet.publicKey,
                 governor: governor.publicKey,
-                resolver: resolver,
+                resolver: resolver_pubkey,
                 globalConfig: existed_global_config_pubkey,
                 oracleConfig: existed_config_pubkey,
+                eventConfig: event_config_pubkey,
+                systemProgram: anchor.web3.SystemProgram.programId,
+            }).transaction();
+
+        await sign_with_governor(transaction, wallet.payer);
+
+        await program.removeEventListener(subscriptionId);
+
+        const mintLen = getMintLen([ExtensionType.NonTransferable]);
+        console.log(mintLen)
+        const mintLen2 = getMintLen([]);
+        console.log(mintLen2)
+    });
+
+    it("Should: Create Event Market", async () => {
+
+        console.log("Create chain_event market chain_event subscriber.")
+        const subscriptionId = program.addEventListener("EventEvent", (event, slot) => {
+            console.log('Event data:', event);
+            console.log('Slot:', slot);
+        });
+
+        const governor = wallet.payer;
+        console.log("Governor account: ", governor.publicKey.toBase58());
+        const resolver_pubkey = wallet.publicKey;
+        console.log("Resolver account: ", resolver_pubkey.toBase58());
+        const event_config_account = await program.account.eventConfig.fetch(event_config_pubkey);
+        const index = event_config_account.index;
+        console.log("Index: ", index);
+        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        console.log("Event data account: ", event_market_pubkey.toBase58());
+        let now = new Date();
+        now.setSeconds(now.getSeconds() + 6);
+        const unixTimestampInSeconds = Math.floor((now.getTime() / 1000));
+        let transaction = await program.methods.createEventMarket({
+            closeTs: new anchor.BN(unixTimestampInSeconds),
+            expiryTs: new anchor.BN(unixTimestampInSeconds)
+        })
+            .accounts({
+                payer: wallet.publicKey,
+                governor: governor.publicKey,
+                globalConfig: existed_global_config_pubkey,
+                eventConfig: event_config_pubkey,
+                oracleConfig: existed_config_pubkey,
                 oracleData: existed_data_data.account_pubkey,
-                mint: null,
                 eventMarketAccount: event_market_pubkey,
                 systemProgram: anchor.web3.SystemProgram.programId,
             }).transaction();
 
-        const { blockhash } = await provider.connection.getLatestBlockhash();
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = wallet.publicKey;
-        transaction.partialSign(wallet.payer);
-        transaction.partialSign(wallet.payer);
-
-        const txId = await provider.sendAndConfirm(transaction).catch(e => console.error(e));
-        console.log("Transaction signature: ", txId);
-
-        const latestBlockHash = await provider.connection.getLatestBlockhash();
-
-        // @ts-ignore
-        await provider.connection.confirmTransaction({
-                blockhash: latestBlockHash.blockhash,
-                lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-                signature: txId,},
-            "confirmed" );
+        await sign_with_governor(transaction, wallet.payer);
 
         await program.removeEventListener(subscriptionId);
 
@@ -557,8 +668,6 @@ describe("factory", () => {
         console.log("Metadata account: ", metadata_pubkey.toBase58());
         const master_edition_pubkey = get_master_edition(mint_pubkey).account_pubkey;
         console.log("Master edition account: ", master_edition_pubkey.toBase58());
-        const collection_mint_pubkey = get_pda(SBT_COLLECTION_SEED).account_pubkey;
-        console.log("Collection mint account: ", collection_mint_pubkey.toBase58());
         const authority_pubkey = get_authority(collection_mint_pubkey).account_pubkey;
         console.log("Authority account: ", authority_pubkey.toBase58());
         const existed_mint_account_info = await
@@ -580,7 +689,6 @@ describe("factory", () => {
                     authority: authority_pubkey,
                     collectionMint: collection_mint_pubkey,
                     mint: mint_pubkey,
-                    // tokenAccount: token_account_pubkey,
                     metadata: metadata_pubkey,
                     masterEdition: master_edition_pubkey,
                     systemProgram: anchor.web3.SystemProgram.programId,
@@ -588,7 +696,7 @@ describe("factory", () => {
                     tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
                     sysvarInstruction: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                     rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-                }).rpc().catch(e => console.error(e));
+                }).rpc();
 
             console.log(" Create SBT transaction signature: ", tx);
 
@@ -610,26 +718,17 @@ describe("factory", () => {
     it("Should: II. Mint SBT", async () => {
         const mint_pubkey = get_sbt_mint(wallet.publicKey).account_pubkey;
         console.log("Mint account: ", mint_pubkey.toBase58())
-        const mint_ai = await provider.connection.getAccountInfo(mint_pubkey);
-        const mint_authority_from_ai = getMintAuthority(mint_ai);
-        console.log("Mint authority read from account info: ", mint_authority_from_ai);
         const metadata_pubkey = get_metadata(mint_pubkey).account_pubkey;
         console.log("Metadata account: ", metadata_pubkey.toBase58());
         const master_edition_pubkey = get_master_edition(mint_pubkey).account_pubkey;
         console.log("Master edition account: ", master_edition_pubkey.toBase58());
-        const collection_mint_pubkey = get_pda(SBT_COLLECTION_SEED).account_pubkey;
-        console.log("Collection mint account: ", collection_mint_pubkey.toBase58());
-        const collection_metadata_pubkey = get_metadata(collection_mint_pubkey).account_pubkey;
-        console.log("Collection metadata account: ", metadata_pubkey.toBase58());
-        const collection_master_edition_pubkey = get_master_edition(collection_mint_pubkey).account_pubkey;
-        console.log("Collection master edition account: ", collection_master_edition_pubkey.toBase58());
         const authority_pubkey = get_authority(collection_mint_pubkey).account_pubkey;
         console.log("Authority account: ", authority_pubkey.toBase58());
         const token_account_pubkey = await getAssociatedTokenAddress(
             mint_pubkey, wallet.publicKey, true,
             TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
         console.log("Token account: ", token_account_pubkey.toBase58());
-        const marker_pubkey = get_marker(wallet.publicKey, null).account_pubkey;
+        const marker_pubkey = get_marker(wallet.publicKey, mint_pubkey).account_pubkey;
         console.log("Marker account: ", marker_pubkey.toBase58());
         const existed_token_account_info = await
             provider.connection.getAccountInfo(token_account_pubkey);
@@ -673,5 +772,405 @@ describe("factory", () => {
         } else {
             console.log("SBT has been minted");
         }
+    });
+
+    it("Should: I. Create Event Master Edition SBT", async () => {
+        let option = 1;
+        const mint_pubkey = get_sbt_event_mint(event_config_pubkey, option).account_pubkey;
+        console.log("Mint account: ", mint_pubkey.toBase58())
+        const metadata_pubkey = get_metadata(mint_pubkey).account_pubkey;
+        console.log("Metadata account: ", metadata_pubkey.toBase58());
+        const master_edition_pubkey = get_master_edition(mint_pubkey).account_pubkey;
+        console.log("Master edition account: ", master_edition_pubkey.toBase58());
+        const authority_pubkey = get_authority(collection_mint_pubkey).account_pubkey;
+        console.log("Authority account: ", authority_pubkey.toBase58());
+        const existed_mint_account_info = await
+            provider.connection.getAccountInfo(mint_pubkey);
+        const params = {
+            name: "Monitor SBT",
+            symbol: "SBT",
+            uri: "monitocol.xyz",
+            option: 1
+        };
+        if (existed_mint_account_info === null) {
+            console.log("[ONCE] Create Event Master Edition SBT for option", option);
+            const subscriptionId = program.addEventListener("SBTMintEvent", (event, slot) => {
+                console.log('Event data:', event);
+                console.log('Slot:', slot);
+            });
+            let transaction = await program.methods.createEventSbt(params)
+                .accounts({
+                    payer: wallet.publicKey,
+                    governor: wallet.publicKey,
+                    globalConfig: existed_global_config_pubkey,
+                    eventConfig: event_config_pubkey,
+                    authority: authority_pubkey,
+                    collectionMint: collection_mint_pubkey,
+                    mint: mint_pubkey,
+                    metadata: metadata_pubkey,
+                    masterEdition: master_edition_pubkey,
+                    systemProgram: anchor.web3.SystemProgram.programId,
+                    tokenProgram: TOKEN_2022_PROGRAM_ID,
+                    tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+                    sysvarInstruction: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                    rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+                }).transaction();
+
+            await sign_with_governor(transaction, wallet.payer);
+
+            await program.removeEventListener(subscriptionId);
+        } else {
+            console.log("SBT has been created");
+        }
+    });
+
+    it("Should: II. Mint Event Master Edition SBT", async () => {
+        let option = 1;
+        const mint_pubkey = get_sbt_event_mint(event_config_pubkey, option).account_pubkey;
+        console.log("Mint account: ", mint_pubkey.toBase58())
+        const metadata_pubkey = get_metadata(mint_pubkey).account_pubkey;
+        console.log("Metadata account: ", metadata_pubkey.toBase58());
+        const master_edition_pubkey = get_master_edition(mint_pubkey).account_pubkey;
+        console.log("Master edition account: ", master_edition_pubkey.toBase58());
+        const authority_pubkey = get_authority(collection_mint_pubkey).account_pubkey;
+        console.log("Authority account: ", authority_pubkey.toBase58());
+        const token_account_pubkey = await getAssociatedTokenAddress(
+            mint_pubkey, authority_pubkey, true,
+            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+        console.log("Token account: ", token_account_pubkey.toBase58());
+        const existed_token_account_info = await
+            provider.connection.getAccountInfo(token_account_pubkey);
+        if (existed_token_account_info === null) {
+            console.log("[ONCE] Mint Event Master Edition SBT");
+            const subscriptionId = program.addEventListener("SBTMintEvent", (event, slot) => {
+                console.log('Event data:', event);
+                console.log('Slot:', slot);
+            });
+            let params = {
+                option: option
+            }
+            let transaction = await program.methods.mintEventSbtMasterEdition(params)
+                .accounts({
+                    payer: wallet.publicKey,
+                    governor: wallet.publicKey,
+                    globalConfig: existed_global_config_pubkey,
+                    eventConfig: event_config_pubkey,
+                    authority: authority_pubkey,
+                    collectionMint: collection_mint_pubkey,
+                    mint: mint_pubkey,
+                    tokenAccount: token_account_pubkey,
+                    metadata: metadata_pubkey,
+                    masterEdition: master_edition_pubkey,
+                    systemProgram: anchor.web3.SystemProgram.programId,
+                    tokenProgram: TOKEN_2022_PROGRAM_ID,
+                    tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+                    sysvarInstruction: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                }).transaction();
+
+            await sign_with_governor(transaction, wallet.payer);
+
+            await program.removeEventListener(subscriptionId);
+        } else {
+            console.log("SBT has been minted");
+        }
+    });
+
+    it("Should: toggle event market", async () => {
+        const index = new anchor.BN(0);
+        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        console.log("Event market pubkey: ", event_market_pubkey.toBase58());
+        const subscriptionId = program.addEventListener("EventEvent", (event, slot) => {
+            console.log('Event data:', event);
+            console.log('Slot:', slot);
+        });
+        let transaction = await program.methods.toggleEventMarket()
+            .accounts({
+                payer: wallet.publicKey,
+                governor: wallet.publicKey,
+                globalConfig: existed_global_config_pubkey,
+                eventConfig: event_config_pubkey,
+                eventMarketAccount: event_market_pubkey
+            }).transaction();
+
+        await sign_with_governor(transaction, wallet.payer);
+
+        await program.removeEventListener(subscriptionId);
+
+    });
+
+    it("Should: choose", async () => {
+        const index = new anchor.BN(0);
+        const indicate = 1;
+        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        console.log("Event market pubkey: ", event_market_pubkey.toBase58());
+        const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
+        console.log("SBT mint pubkey: ", sbt_mint.toBase58());
+        const token_account_pubkey = await getAssociatedTokenAddress(
+            sbt_mint, wallet.publicKey, true,
+            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+        console.log("SBT token account pubkey: ", token_account_pubkey.toBase58());
+        const marker = get_marker(wallet.publicKey, sbt_mint).account_pubkey;
+        console.log("Marker pubkey: ", marker.toBase58());
+        const user_position = get_user_position(event_market_pubkey, wallet.publicKey).account_pubkey;
+        console.log("User position pubkey: ", user_position.toBase58());
+        const event_position = get_event_position(event_market_pubkey, indicate).account_pubkey;
+        console.log("Event position pubkey: ", event_position.toBase58());
+
+        const subscriptionId = program.addEventListener("ChooseEvent", (event, slot) => {
+            console.log('Event data:', event);
+            console.log('Slot:', slot);
+        });
+        const params = {
+            indicate: indicate
+        }
+        let tx = await program.methods.choose(params)
+            .accounts({
+                payer: wallet.publicKey,
+                sbtMint: sbt_mint,
+                tokenAccount: token_account_pubkey,
+                marker: marker,
+                userPosition: user_position,
+                eventPosition: event_position,
+                eventConfig: event_config_pubkey,
+                eventMarket: event_market_pubkey,
+                systemProgram: anchor.web3.SystemProgram.programId
+            }).rpc();
+
+        console.log("Signature: ", tx);
+        await program.removeEventListener(subscriptionId);
+    });
+
+    it("Should: withdraw", async () => {
+        const index = new anchor.BN(0);
+        const indicate = 1;
+        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        console.log("Event market pubkey: ", event_market_pubkey.toBase58());
+        const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
+        console.log("SBT mint pubkey: ", sbt_mint.toBase58());
+        const token_account_pubkey = await getAssociatedTokenAddress(
+            sbt_mint, wallet.publicKey, true,
+            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+        console.log("SBT token account pubkey: ", token_account_pubkey.toBase58());
+        const marker = get_marker(wallet.publicKey, sbt_mint).account_pubkey;
+        console.log("Marker pubkey: ", marker.toBase58());
+        const user_position = get_user_position(event_market_pubkey, wallet.publicKey).account_pubkey;
+        console.log("User position pubkey: ", user_position.toBase58());
+        const event_position = get_event_position(event_market_pubkey, indicate).account_pubkey;
+        console.log("Event position pubkey: ", event_position.toBase58());
+        const subscriptionId = program.addEventListener("ChooseEvent", (event, slot) => {
+            console.log('Event data:', event);
+            console.log('Slot:', slot);
+        });
+        const params = {
+            indicate: indicate
+        }
+        let tx = await program.methods.withdraw(params)
+            .accounts({
+                payer: wallet.publicKey,
+                sbtMint: sbt_mint,
+                marker: marker,
+                userPosition: user_position,
+                eventPosition: event_position,
+                eventMarket: event_market_pubkey,
+                systemProgram: anchor.web3.SystemProgram.programId
+            }).rpc();
+        console.log("Withdraw signature: ", tx);
+
+        tx = await program.methods.choose(params)
+            .accounts({
+                payer: wallet.publicKey,
+                sbtMint: sbt_mint,
+                tokenAccount: token_account_pubkey,
+                marker: marker,
+                userPosition: user_position,
+                eventPosition: event_position,
+                eventConfig: event_config_pubkey,
+                eventMarket: event_market_pubkey,
+                systemProgram: anchor.web3.SystemProgram.programId
+            }).rpc();
+
+        console.log("Re-choose signature: ", tx);
+        await program.removeEventListener(subscriptionId);
+    });
+
+    it("Should: resolve", async () => {
+        console.log("Set oracle new data.");
+        const phase = 1;
+        const raw_data = new anchor.BN(80);
+        const decimals = 0
+
+        let tx = await monitor_program.methods.setOracleData(
+            phase,
+            raw_data,
+            decimals,
+            existed_data_data.bump
+        ).accounts({
+            config: existed_config_pubkey,
+            oracle: existed_data_data.account_pubkey,
+            user: wallet.publicKey,
+        }).rpc();
+        console.log('Set oracle data signature: ', tx);
+        await sleep(5000);
+        console.log('Resolve event market.')
+        const prize = new anchor.BN(30000000000);
+        const index = new anchor.BN(0);
+        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        console.log("Event market pubkey: ", event_market_pubkey.toBase58());
+        const subscriptionId = program.addEventListener("EventEvent", (event, slot) => {
+            console.log('Event data:', event);
+            console.log('Slot:', slot);
+        });
+        const params = {
+            prize: prize
+        }
+        tx = await program.methods.resolve(params)
+            .accounts({
+                resolver: wallet.publicKey,
+                oracleConfig: existed_config_pubkey,
+                oracleData: existed_data_data.account_pubkey,
+                eventConfig: event_config_pubkey,
+                eventMarket: event_market_pubkey
+            }).rpc();
+        console.log("Resolve signature: ", tx);
+        await program.removeEventListener(subscriptionId);
+    });
+
+    it("Should: claim", async () => {
+        console.log("Mint token to event mining token account");
+        const mint = get_pda(MINT_SEED).account_pubkey;
+        console.log("FT Mint pubkey: ", mint.toBase58());
+        const event_mining_pda = get_pda(EVENT_MINING_SEED).account_pubkey;
+        console.log("Event mining pda pubkey: ", event_mining_pda.toBase58());
+        const event_mining_token_account = await getAssociatedTokenAddress(
+            mint, event_mining_pda, true,
+            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+        console.log("Event mining token account pubkey: ", event_mining_token_account.toBase58());
+        const ft_mint_authority = get_authority(mint).account_pubkey;
+        console.log("FT mint authority pubkey: ", ft_mint_authority.toBase58());
+        let params = {
+            amount:  new anchor.BN(10e13)
+        }
+        let tx = await program.methods.mintTokens(params).accounts({
+            payer: wallet.publicKey,
+            globalConfig: existed_global_config_pubkey,
+            mint: mint,
+            user: event_mining_pda,
+            tokenAccount: event_mining_token_account,
+            authority: ft_mint_authority,
+            tokenProgram: TOKEN_2022_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId
+            }).rpc();
+
+        console.log("Mint token to event mining token account signature: ", tx);
+
+        console.log("User claim prize")
+        const index = new anchor.BN(0);
+        const event_market_pubkey = get_event_market(existed_config_pubkey, index).account_pubkey;
+        console.log("Event market pubkey: ", event_market_pubkey.toBase58())
+        const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
+        console.log("SBT mint pubkey: ", sbt_mint.toBase58());
+        const marker = get_marker(wallet.publicKey, sbt_mint).account_pubkey;
+        console.log("Marker pubkey: ", marker.toBase58());
+        const user_position = get_user_position(event_market_pubkey, wallet.publicKey).account_pubkey;
+        console.log("User position pubkey: ", user_position.toBase58());
+        const token_account = await getAssociatedTokenAddress(
+            mint, wallet.publicKey, true,
+            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+        console.log("User FT token account pubkey: ", token_account.toBase58());
+        let indicate = 1;
+        const event_sbt_edition_mint = get_sbt_event_edition_mint(
+            event_config_pubkey, indicate, wallet.publicKey).account_pubkey;
+        console.log("Event sbt edition mint pubkey: ", event_sbt_edition_mint.toBase58());
+        const event_sbt_edition_token_account = await getAssociatedTokenAddress(
+            event_sbt_edition_mint, wallet.publicKey, true,
+            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+        console.log("Event sbt edition token account pubkey: ", event_sbt_edition_token_account.toBase58());
+        const event_sbt_edition_metadata = get_metadata(event_sbt_edition_mint).account_pubkey;
+        console.log("Event sbt edition metadata pubkey: ", event_sbt_edition_metadata.toBase58());
+        const event_sbt_edition = get_master_edition(event_sbt_edition_mint).account_pubkey;
+        console.log("Event sbt edition pubkey: ", event_sbt_edition.toBase58());
+        const authority = get_authority(collection_mint_pubkey).account_pubkey;
+        console.log("Print authority pubkey: ", authority.toBase58())
+        const event_sbt_master_edition_mint = get_sbt_event_mint(event_config_pubkey, indicate).account_pubkey;
+        console.log("Event sbt master edition mint: ", event_sbt_master_edition_mint.toBase58());
+        const event_sbt_master_edition_token_account = await getAssociatedTokenAddress(
+            event_sbt_master_edition_mint, authority, true,
+            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+        console.log("Event sbt master edition token account: ", event_sbt_master_edition_token_account.toBase58());
+        const event_sbt_master_edition_metadata = get_metadata(event_sbt_master_edition_mint).account_pubkey;
+        console.log("Event sbt master edition metadata: ", event_sbt_master_edition_metadata.toBase58());
+        const event_sbt_master_edition = get_master_edition(event_sbt_master_edition_mint).account_pubkey;
+        console.log("Event sbt master edition master edition: ", event_sbt_master_edition.toBase58());
+        const event_sbt_edition_pda = get_edition_mark_pda(event_sbt_master_edition_mint, 1).account_pubkey;
+        console.log("Event sbt edition pda: ", event_sbt_edition_pda.toBase58());
+        const subscriptionId = program.addEventListener("SBTMintEvent", (event, slot) => {
+            console.log('Event data:', event);
+            console.log('Slot:', slot);
+        });
+        const subscriptionId2 = program.addEventListener("BalanceChangeEvent", (event, slot) => {
+            console.log('Event data:', event);
+            console.log('Slot:', slot);
+        });
+        const subscriptionId3 = program.addEventListener("ChooseEvent", (event, slot) => {
+            console.log('Event data:', event);
+            console.log('Slot:', slot);
+        });
+
+        let params2 = {
+            indicate: indicate,
+            sbtMint: sbt_mint,
+        }
+        const modifyComputeUnits = anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
+            units: 1000000
+        });
+
+        const addPriorityFee = anchor.web3.ComputeBudgetProgram.setComputeUnitPrice({
+            microLamports: 10
+        });
+
+        let ix = await program.methods.claim(params2)
+            .accounts({
+                payer: wallet.publicKey,
+                globalConfig: existed_global_config_pubkey,
+                eventConfig: event_config_pubkey,
+                eventMarket: event_market_pubkey,
+                marker: marker,
+                userPosition: user_position,
+                mint: mint,
+                tokenAccount: token_account,
+                eventMiningPda: event_mining_pda,
+                eventMiningTokenAccount: event_mining_token_account,
+                eventSbtEditionMint: event_sbt_edition_mint,
+                eventSbtEditionTokenAccount: event_sbt_edition_token_account,
+                eventSbtEditionMetadata: event_sbt_edition_metadata,
+                eventSbtEdition: event_sbt_edition,
+                eventSbtEditionPda: event_sbt_edition_pda,
+                authority: authority,
+                collectionMint: collection_mint_pubkey,
+                eventSbtMasterEditionMint: event_sbt_master_edition_mint,
+                eventSbtMasterEditionTokenAccount: event_sbt_master_edition_token_account,
+                eventSbtMasterEditionMetadata: event_sbt_master_edition_metadata,
+                eventSbtMasterEdition: event_sbt_master_edition,
+                systemProgram: anchor.web3.SystemProgram.programId,
+                tokenProgram: TOKEN_2022_PROGRAM_ID,
+                tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                sysvarInstruction: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+                rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+
+            }).instruction();
+
+        let transaction = new anchor.web3.Transaction()
+            .add(modifyComputeUnits)
+            .add(addPriorityFee)
+            .add(ix);
+
+        const txId = await provider.sendAndConfirm(transaction).catch(e => console.error(e));
+        console.log("Resolve signature: ", txId);
+        await program.removeEventListener(subscriptionId);
+        await program.removeEventListener(subscriptionId2);
+        await program.removeEventListener(subscriptionId3);
     });
 });
