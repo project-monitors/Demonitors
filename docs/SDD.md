@@ -87,6 +87,15 @@ let transaction = new anchor.web3.Transaction()
 
 ## Program
 
+### Addresses
+
+#### devnet
+
+- Monitor Program: 12YQKMkv1xZ1B4gwVMiGTcYvY1z6TpdFvyAWyjhuC63c
+- Factory Program: 36KZHRWMKbGNsMZ2jMVuRbnMUrjzRr8kmjHyPJ9ipvFW
+- OracleConfig Account: A2qYPWjeWXrcm2vwXEy11vigwyrN4zrmZbtzxR1MM8A5
+- OracleData Account: Aj8wNCAbySPpDNxzFxrfqvBmJEqQ8CgLQTK7fGNNwm1d
+
 ### Accounts 
 
 依照字母表顺序
