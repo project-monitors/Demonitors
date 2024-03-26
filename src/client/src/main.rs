@@ -24,6 +24,7 @@ fn main() -> Result<()> {
 
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
+        std::process::exit(0);
     }).expect("Error setting Ctrl-C handler");
 
     println!("Started feeding loop. Press Ctrl-C to terminate.");
@@ -36,7 +37,6 @@ fn main() -> Result<()> {
 
         sleep(Duration::from_secs(feeder.caller.config.oracle.interval));
     }
-
     Ok(())
 
 }

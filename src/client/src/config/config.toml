@@ -10,4 +10,8 @@ config_name="terrordemo2"
 config_description="this is terror demo"
 total_phase=2
 authority_pubkey="42taRyQCVHSgeHynMDkomRSRQ26rZ5Ygm2pq7QGmDwnP"
-interval=120
+interval=15
+program_id="6ULtrYwokDeKTPjArrZYDFQ5yuzZgdZBKCRr2YjyyL22"
+
+[event]
+program_id="BdFDKd6ALeLWuF6X52iLBoaEhK29NwtEUAhWv4bwcmjQ"

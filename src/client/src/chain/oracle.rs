@@ -4,7 +4,6 @@ use std::{sync::Arc};
 use monitor::{
     accounts as monitor_accounts,
     instruction as monitor_instructions,
-    ID as monitor_program_id,
     state::{
         OracleConfig,
         OracleData
@@ -23,6 +22,7 @@ use anchor_client::{
     Program,
     anchor_lang::AccountDeserialize
 };
+use anchor_client::solana_sdk::pubkey;
 
 use anyhow::{Result, anyhow, Error};
 
@@ -51,21 +51,21 @@ impl ChainCaller{
     pub fn new (cfg: Arc<ClientConfig>) -> Result<ChainCaller> {
         let config_clone = cfg.clone();
         let client = setup_client(&config_clone)?;
-        let program = client.program(monitor_program_id)?;
+        let program = client.program(pubkey!(cfg.oracle.program_id).parse()?)?;
         let payer = program.payer();
         let config_pda = Pubkey::find_program_address(
             &[
                 ORACLE_CONFIG_SEED_STRING.as_bytes(),
                 cfg.oracle.config_name.as_bytes(),
             ],
-            &monitor_program_id,
+            &pubkey!(cfg.oracle.program_id).parse()?,
         );
         let data_pda = Pubkey::find_program_address(
             &[
                 ORACLE_DATA_SEED_STRING.as_bytes(),
                 config_pda.0.as_ref(),
             ],
-            &monitor_program_id,
+            &pubkey!(cfg.oracle.program_id).parse()?,
         );
 
         Ok(ChainCaller {

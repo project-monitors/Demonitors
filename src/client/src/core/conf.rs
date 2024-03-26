@@ -4,6 +4,7 @@ use serde::Deserialize;
 pub struct ClientConfig {
     pub solana: SolanaConfig,
     pub oracle: OracleConfig,
+    pub event: EventConfig,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -22,4 +23,11 @@ pub struct OracleConfig {
     pub total_phase: u8,
     pub authority_pubkey: String,
     pub interval: u64,
+    pub program_id: String,
 }
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct EventConfig {
+    pub program_id: String
+}
+

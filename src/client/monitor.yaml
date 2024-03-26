@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitor-client-conf
+  namespace: monitor-test
+data:
+  config.toml: |
+    [solana]
+    rpc_url="https://api.devnet.solana.com"
+    ws_url="wss://api.devnet.solana.com"
+    keypair_path="/secret/id.json"
+    commitment="confirmed"
+    network="devnet"
+    
+    [oracle]
+    
+    config_name="terrordemo2"
+    config_description="this is terror demo"
+    total_phase=2
+    authority_pubkey="42taRyQCVHSgeHynMDkomRSRQ26rZ5Ygm2pq7QGmDwnP"
+    interval=120
+    program_id="6ULtrYwokDeKTPjArrZYDFQ5yuzZgdZBKCRr2YjyyL22"
+  
+    [event]
+    program_id="BdFDKd6ALeLWuF6X52iLBoaEhK29NwtEUAhWv4bwcmjQ"
+      
+      
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitor-client
+  namespace: monitor-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitor-client
+  template:
+    metadata:
+      labels:
+        app: monitor-client
+    spec:
+      containers:
+        - name: monitor-client
+          image: 407324771176.dkr.ecr.us-east-2.amazonaws.com/monitors-client:latest
+          resources:
+            limits:
+              memory: "200M"
+              cpu: "0.2"
+            requests:
+              memory: "50M"
+              cpu: "0.1"
+          volumeMounts:
+            - name: "config"
+              mountPath: "/configs"
+      volumes:
+        - name: config
+          configMap:
+            name: ofav-backend-conf
+            items:
+              - key: config.toml
+                path: config.toml
+
