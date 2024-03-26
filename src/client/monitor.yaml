@@ -55,11 +55,17 @@ spec:
           volumeMounts:
             - name: "config"
               mountPath: "/configs"
+            - name: "wallet-secret"
+              mountPath: "/secret"
+              readOnly: true
       volumes:
         - name: config
           configMap:
-            name: ofav-backend-conf
+            name: monitor-client-conf
             items:
               - key: config.toml
                 path: config.toml
+        - name: wallet-secret
+          secret:
+            secretName: wallet-secret
 
