@@ -1,6 +1,6 @@
 mod error;
-mod instructions;
-mod state;
+pub mod instructions;
+pub mod state;
 mod chain_event;
 mod utils;
 

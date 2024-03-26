@@ -23,6 +23,7 @@ data:
   
     [event]
     program_id="BdFDKd6ALeLWuF6X52iLBoaEhK29NwtEUAhWv4bwcmjQ"
+    vision_mining_admin_pubkey="9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG"
       
       
 
@@ -54,7 +55,7 @@ spec:
               cpu: "0.1"
           volumeMounts:
             - name: "config"
-              mountPath: "/configs"
+              mountPath: "/config"
             - name: "wallet-secret"
               mountPath: "/secret"
               readOnly: true
