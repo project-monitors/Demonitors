@@ -14,5 +14,6 @@ yarn.lock
 **/*.rs.bk
 test-ledger
 .anchor
+secret.yaml
 
 
