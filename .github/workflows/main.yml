@@ -37,7 +37,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --locked
+          args: --release --locked --manifest-path src/client/Cargo.toml
 
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v1
