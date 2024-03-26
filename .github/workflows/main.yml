@@ -23,7 +23,10 @@ jobs:
       contents: read
     steps:
       - name: Git checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
