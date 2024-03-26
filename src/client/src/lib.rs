@@ -9,6 +9,5 @@ pub mod prelude {
         ChainCaller,
         OracleDataRequest,
     };
-    pub use crate::util::*;
     pub use crate::service::feeder::Feeder;
 }

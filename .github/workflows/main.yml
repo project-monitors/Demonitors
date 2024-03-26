@@ -1,0 +1,68 @@
+name: monitors-client docker ci
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+
+env:
+  AWS_REGION: us-east-2
+  IMAGE_REPO: monitors-client
+
+jobs:
+  docker-image-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/client
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          default: true
+          target: x86_64-unknown-linux-gnu
+
+      - name: Build release binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --locked
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::407324771176:role/github-actions-role
+          role-session-name: githubcisession
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ steps.login-ecr.outputs.registry }}/${{ env.IMAGE_REPO }}
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.IMAGE_REPO }}
+          IMAGE_TAG: ${{ steps.meta.outputs.tags }}
+        run: |
+          docker build -t $IMAGE_TAG .
+          docker push $IMAGE_TAG
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest

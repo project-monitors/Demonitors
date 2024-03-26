@@ -37,12 +37,11 @@ impl Feeder{
                 let latest_raw_data = fetched_data.value.parse::<u64>()?;
                 let raw_data = latest_raw_data;
                 let decimals = 0;
-                let phase: u8;
-                if latest_raw_data - data.raw_data >= 0 {
-                    phase = 1
+                let phase: u8 = if latest_raw_data >= data.raw_data {
+                    1
                 } else {
-                    phase = 0
-                }
+                    0
+                };
                 let request = OracleDataRequest {
                     phase,
                     raw_data,

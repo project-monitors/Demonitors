@@ -14,7 +14,7 @@ pub fn setup_client(cfg: &Arc<ClientConfig>) -> Result<ChainClient> {
         .map_err(|_| anyhow!("Failed to read keypair file at {}", cfg.solana.keypair_path))?;
     let key_bytes = keypair.to_bytes();
     let signer = Arc::new(Keypair::from_bytes(&key_bytes)
-                              .map_err(|e| anyhow::Error::from(e))?);
+                              .map_err(anyhow::Error::from)?);
     let cluster = Cluster::Custom(cfg.solana.rpc_url.clone(), cfg.solana.ws_url.clone());
     let opts = CommitmentConfig::confirmed();
     Ok(Client::new_with_options(cluster, signer, opts))

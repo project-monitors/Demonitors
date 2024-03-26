@@ -98,7 +98,7 @@ impl ChainCaller{
             .args(monitor_instructions::InitializeOracleConfig {
                 name: self.config.oracle.config_name.clone(),
                 description: self.config.oracle.config_description.clone(),
-                total_phase: self.config.oracle.total_phase.clone(),
+                total_phase: self.config.oracle.total_phase,
             });
 
         let sig = ix.send()?;
@@ -141,7 +141,7 @@ impl ChainCaller{
                 )
             })?;
         OracleConfig::try_deserialize(&mut oracle_config_account_data.as_slice())
-            .map_err(|e|Error::new(e))
+            .map_err(Error::new)
     }
 
     pub fn initialize_oracle_data(&self) -> Result<Signature> {
@@ -186,7 +186,7 @@ impl ChainCaller{
                 )
             })?;
        OracleData::try_deserialize(&mut oracle_data_account_data.as_slice())
-            .map_err(|e|Error::new(e))
+            .map_err(Error::new)
 
     }
 }
