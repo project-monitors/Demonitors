@@ -203,10 +203,10 @@ impl EventCaller {
                 rent: RENT_ID,
             })
             .args(event_instructions::InitializeMint{ params: InitializeMintParams {
-                name: self.config.event.ft_token_name.to_string(),
-                symbol: self.config.event.ft_token_symbol.to_string(),
-                uri: self.config.event.ft_token_url.to_string(),
-                decimals: self.config.event.ft_token_decimal,
+                name: self.config.metadata.ft_token_name.to_string(),
+                symbol: self.config.metadata.ft_token_symbol.to_string(),
+                uri: self.config.metadata.ft_token_url.to_string(),
+                decimals: self.config.metadata.ft_token_decimal,
             }});
         let sig = ix.send()?;
         Ok(sig)
@@ -249,9 +249,9 @@ impl EventCaller {
                 rent: RENT_ID,
             })
             .args(event_instructions::InitializeCollection{ params: InitializeCollectionParams {
-                name: self.config.event.sbt_token_name.to_string(),
-                symbol: self.config.event.sbt_token_symbol.to_string(),
-                uri: self.config.event.sbt_token_url.to_string(),
+                name: self.config.metadata.sbt_token_name.to_string(),
+                symbol: self.config.metadata.sbt_token_symbol.to_string(),
+                uri: self.config.metadata.sbt_token_url.to_string(),
             }});
         let sig = ix.send()?;
         Ok(sig)

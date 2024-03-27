@@ -5,6 +5,8 @@ pub struct ClientConfig {
     pub solana: SolanaConfig,
     pub oracle: OracleConfig,
     pub event: EventConfig,
+    pub market: Market,
+    pub metadata: Metadata,
     pub tokenomics: Tokenomics,
 }
 
@@ -31,6 +33,16 @@ pub struct OracleConfig {
 pub struct EventConfig {
     pub program_id: String,
     pub vision_mining_admin_pubkey: String,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct Market {
+    pub hourly_create: bool,
+    pub daily_create: bool,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct Metadata {
     pub ft_token_name: String,
     pub ft_token_symbol: String,
     pub ft_token_url: String,
@@ -50,6 +62,7 @@ pub struct EventConfig {
 #[derive(Deserialize, Clone, Debug)]
 pub struct Tokenomics {
     pub vision_mining: u64,
-    pub event_mining: u64
+    pub event_mining: u64,
+    pub event_prize: u64,
 }
 

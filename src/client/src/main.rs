@@ -14,9 +14,13 @@ fn main() -> Result<()> {
     let config: ClientConfig = toml::from_str(&contents)?;
     println!("[Debug] {:?}", config);
     let config: Arc<ClientConfig> = Arc::new(config);
-    let mut feeder = Feeder::new(config)?;
+    let mut feeder = Feeder::new(config.clone())?;
 
     println!("[INFO] feeder created");
+
+    let mut event_manager = EventManager::new(config)?;
+
+    println!("[INFO] event manager created");
 
     let running = Arc::new(AtomicBool::new(true));
 
@@ -24,6 +28,7 @@ fn main() -> Result<()> {
 
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
+        println!("[INFO] quitting...");
         std::process::exit(0);
     }).expect("Error setting Ctrl-C handler");
 
@@ -34,7 +39,11 @@ fn main() -> Result<()> {
             Ok(_) => println!("Feed successful"),
             Err(e) => eprintln!("Error occurred while feeding: {:?}", e),
         }
-
+        println!("Event manager checking...");
+        if let Err(e) = event_manager.check() {
+            println!("An error occurred during event manager checking: {}", e);
+        }
+        println!("Event manager's job done");
         sleep(Duration::from_secs(feeder.caller.config.oracle.interval));
     }
     Ok(())

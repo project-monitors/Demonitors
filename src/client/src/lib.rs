@@ -10,5 +10,8 @@ pub mod prelude {
         OracleDataRequest,
     };
     pub use crate::chain::event::EventCaller;
-    pub use crate::service::feeder::Feeder;
+    pub use crate::service::{
+        feeder::Feeder,
+        event_manager::EventManager
+    };
 }

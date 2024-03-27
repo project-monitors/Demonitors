@@ -16,6 +16,12 @@ program_id="6ULtrYwokDeKTPjArrZYDFQ5yuzZgdZBKCRr2YjyyL22"
 [event]
 program_id="BdFDKd6ALeLWuF6X52iLBoaEhK29NwtEUAhWv4bwcmjQ"
 vision_mining_admin_pubkey="9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG"
+
+[market]
+hourly_create=true
+daily_create=true
+
+[metadata]
 ft_token_name="monitor"
 ft_token_symbol="MONI"
 ft_token_url="monitare.xyz"
@@ -31,6 +37,8 @@ greed_sbt_token_name="greed"
 greed_sbt_token_symbol="GREED"
 greed_sbt_token_url="monitare.xyz"
 
+
 [tokenomics]
 vision_mining = 10000000
 event_mining = 60000000
+event_prize = 30

@@ -78,16 +78,16 @@ fn initialize () -> Result<(), Error> {
         https://explorer.solana.com/tx/{}{}", sig, suffix);
 
     let option: u8 = 2;
-    let meta_json_url = event_caller.config.event.event_metadata_url.clone();
+    let meta_json_url = event_caller.config.metadata.event_metadata_url.clone();
 
     let sig = event_caller.create_event_config(option, meta_json_url)?;
     println!("[Debug] Create event config successfully. \n\
         https://explorer.solana.com/tx/{}{}", sig, suffix);
 
     let fear = CreateEventSBTParams{
-        name: event_caller.config.event.fear_sbt_token_name.to_string(),
-        symbol: event_caller.config.event.fear_sbt_token_symbol.to_string(),
-        uri: event_caller.config.event.fear_sbt_token_url.to_string(),
+        name: event_caller.config.metadata.fear_sbt_token_name.to_string(),
+        symbol: event_caller.config.metadata.fear_sbt_token_symbol.to_string(),
+        uri: event_caller.config.metadata.fear_sbt_token_url.to_string(),
         option: 1,
     };
     let sig = event_caller.create_event_sbt(fear)?;
@@ -98,9 +98,9 @@ fn initialize () -> Result<(), Error> {
         https://explorer.solana.com/tx/{}{}", sig, suffix);
 
     let greed = CreateEventSBTParams{
-        name: event_caller.config.event.greed_sbt_token_name.to_string(),
-        symbol: event_caller.config.event.greed_sbt_token_symbol.to_string(),
-        uri: event_caller.config.event.greed_sbt_token_url.to_string(),
+        name: event_caller.config.metadata.greed_sbt_token_name.to_string(),
+        symbol: event_caller.config.metadata.greed_sbt_token_symbol.to_string(),
+        uri: event_caller.config.metadata.greed_sbt_token_url.to_string(),
         option: 2,
     };
     let sig = event_caller.create_event_sbt(greed)?;
