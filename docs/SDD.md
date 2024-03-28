@@ -14,6 +14,33 @@
 - 结合timestamp来调用rpc查询历史数据
 - 结合美术逻辑，进行渲染
 
+#### backend api
+
+```shell
+curl --location --request GET 'https://api.monitare.xyz/api/v1/oracle_data/1711600000'
+```
+请求的最后填写时间戳，会返回离此时间戳最近的上一轮oracle_data数据。
+
+返回结构：
+
+- raw_data: 恐惧贪婪指数的值
+- timestamp: 上一次的时间戳
+- authoritative: 若为true，则数据来自于预言机合约；若为false，则是从第三方API获取的历史数据追加
+
+```json
+{
+    "code": 0,
+    "err": false,
+    "msg": "OK",
+    "data": {
+        "raw_data": 80,
+        "timestamp": 1711584012,
+        "authoritative": true
+    }
+}
+```
+
+
 ### 3. 渲染未来景观：
 - 读取OracleData(oracle_data) Account的raw_data数据
 - 根据open_ts和oracle_config来计算未来景观的EventMarket(event_market)
