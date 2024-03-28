@@ -9,7 +9,10 @@ use anchor_lang::{
 use anchor_spl::{
     metadata::{
         Metadata,
-        mpl_token_metadata::instructions::PrintV1CpiBuilder,
+        mpl_token_metadata::{
+            instructions::PrintV1CpiBuilder,
+            accounts::MasterEdition,
+        },
     },
     token_interface::{Mint, TokenAccount, TokenInterface, transfer_checked, TransferChecked,
                       spl_token_2022::instruction::{initialize_mint2, initialize_non_transferable_mint}}
@@ -311,6 +314,12 @@ impl<'info> Claim<'info> {
                     &[authority_bump],
                 ]];
 
+                let master_edition_ai = self.event_sbt_master_edition.to_account_info();
+
+                let me = MasterEdition::from_bytes(&master_edition_ai.data.borrow())?;
+
+                let edition_number = me.supply.checked_add(1).unwrap();
+
                 PrintV1CpiBuilder::new(&self.token_metadata_program.to_account_info())
                     .edition_metadata(&self.event_sbt_edition_metadata.to_account_info())
                     .edition(&self.event_sbt_edition.to_account_info())
@@ -320,7 +329,7 @@ impl<'info> Claim<'info> {
                     .edition_mint_authority(&self.authority.to_account_info())
                     .master_edition(&self.event_sbt_master_edition.to_account_info())
                     .edition_marker_pda(&self.event_sbt_edition_pda)
-                    .payer(&self.payer.to_account_info())
+                     .payer(&self.payer.to_account_info())
                     .master_token_account_owner(&self.authority.to_account_info())
                     .master_token_account(&self.event_sbt_master_edition_token_account.to_account_info())
                     .master_metadata(&self.event_sbt_master_edition_metadata.to_account_info())
@@ -329,7 +338,7 @@ impl<'info> Claim<'info> {
                     .spl_ata_program(&self.associated_token_program.to_account_info())
                     .sysvar_instructions(&self.sysvar_instruction.to_account_info())
                     .system_program(&self.system_program.to_account_info())
-                    .edition_number(1)
+                    .edition_number(edition_number)
                     .invoke_signed(&signer_seeds)?;
 
                 emit!(SBTMintEvent{
