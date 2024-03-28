@@ -1,7 +1,6 @@
 use anyhow::Error;
 use std::fs::File;
 use std::io::Read;
-use std::sync::Arc;
 use client::prelude::*;
 use factory::instructions::CreateEventSBTParams;
 
@@ -23,7 +22,6 @@ fn initialize () -> Result<(), Error> {
     file.unwrap().read_to_string(&mut contents)?;
     let config: ClientConfig = toml::from_str(&contents)?;
     println!("{:?}", config);
-    let config: Arc<ClientConfig> = Arc::new(config);
     let mut suffix = "";
     if config.solana.network == "devnet" {
         suffix = "?cluster=devnet";

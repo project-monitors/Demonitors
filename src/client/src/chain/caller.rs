@@ -9,7 +9,7 @@ use anyhow::{
 
 pub type ChainClient = Client<Arc<Keypair>>;
 
-pub fn setup_client(cfg: &Arc<ClientConfig>) -> Result<ChainClient> {
+pub fn setup_client(cfg: &ClientConfig) -> Result<ChainClient> {
     let keypair = read_keypair_file(cfg.solana.keypair_path.clone())
         .map_err(|_| anyhow!("Failed to read keypair file at {}", cfg.solana.keypair_path))?;
     let key_bytes = keypair.to_bytes();

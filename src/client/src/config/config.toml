@@ -26,15 +26,15 @@ ft_token_name="monitor"
 ft_token_symbol="MONI"
 ft_token_url="monitare.xyz"
 ft_token_decimal=9
-sbt_token_name="persona"
-sbt_token_symbol="PERSONA"
+sbt_token_name="Protyl"
+sbt_token_symbol="PROTYL"
 sbt_token_url="monitare.xyz"
 event_metadata_url="monitare.xyz"
-fear_sbt_token_name="fear"
-fear_sbt_token_symbol="FEAR"
+fear_sbt_token_name="Pale Gaze"
+fear_sbt_token_symbol="PGM"
 fear_sbt_token_url="monitare.xyz"
-greed_sbt_token_name="greed"
-greed_sbt_token_symbol="GREED"
+greed_sbt_token_name="Great Swallow"
+greed_sbt_token_symbol="GSM"
 greed_sbt_token_url="monitare.xyz"
 
 
@@ -42,3 +42,6 @@ greed_sbt_token_url="monitare.xyz"
 vision_mining = 10000000
 event_mining = 60000000
 event_prize = 30
+
+[api]
+port=8080

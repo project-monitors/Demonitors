@@ -13,19 +13,45 @@ data:
     network="devnet"
     
     [oracle]
-    
-    config_name="terrordemo2"
+    config_name="22QVCPu62x2Z3abSdgHzpU4PyFttu9u"
     config_description="this is terror demo"
     total_phase=2
     authority_pubkey="42taRyQCVHSgeHynMDkomRSRQ26rZ5Ygm2pq7QGmDwnP"
-    interval=120
-    program_id="6ULtrYwokDeKTPjArrZYDFQ5yuzZgdZBKCRr2YjyyL22"
-  
+    interval=15
+    program_id="12YQKMkv1xZ1B4gwVMiGTcYvY1z6TpdFvyAWyjhuC63c"
+    
     [event]
-    program_id="BdFDKd6ALeLWuF6X52iLBoaEhK29NwtEUAhWv4bwcmjQ"
+    program_id="36KZHRWMKbGNsMZ2jMVuRbnMUrjzRr8kmjHyPJ9ipvFW"
     vision_mining_admin_pubkey="9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG"
-      
-      
+    
+    [market]
+    hourly_create=true
+    daily_create=true
+    
+    [metadata]
+    ft_token_name="monitor"
+    ft_token_symbol="MONI"
+    ft_token_url="monitare.xyz"
+    ft_token_decimal=9
+    sbt_token_name="Protyl"
+    sbt_token_symbol="PROTYL"
+    sbt_token_url="monitare.xyz"
+    event_metadata_url="monitare.xyz"
+    fear_sbt_token_name="Pale Gaze"
+    fear_sbt_token_symbol="PGM"
+    fear_sbt_token_url="monitare.xyz"
+    greed_sbt_token_name="Great Swallow"
+    greed_sbt_token_symbol="GSM"
+    greed_sbt_token_url="monitare.xyz"
+    
+    
+    [tokenomics]
+    vision_mining = 10000000
+    event_mining = 60000000
+    event_prize = 30
+    
+    [api]
+    port=8080
 
 ---
 apiVersion: apps/v1
@@ -46,6 +72,22 @@ spec:
       containers:
         - name: monitor-client
           image: 407324771176.dkr.ecr.us-east-2.amazonaws.com/monitors-client:latest
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 30
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 30
           resources:
             limits:
               memory: "200M"
@@ -59,6 +101,8 @@ spec:
             - name: "wallet-secret"
               mountPath: "/secret"
               readOnly: true
+          ports:
+            - containerPort: 8080
       volumes:
         - name: config
           configMap:
@@ -70,3 +114,43 @@ spec:
           secret:
             secretName: wallet-secret
 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitor-client-svc
+  namespace: monitor-test
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: monitor-client
+  ports:
+    - port: 8080
+      protocol: TCP
+      name: port8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/cors-allow-methods: GET, POST, OPTIONS
+    nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Length, X-CSRF-Token, Token,session,X_Requested_With,Accept, Origin, Host, Connection, Accept-Encoding, Accept-Language,DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Pragma, token, X-AppId, X-Signature, X-Signature-Method"
+  name: monitor-client
+  namespace: monitor-test
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.monitare.xyz
+      http:
+        paths:
+          - backend:
+              service:
+                name: monitor-client-svc
+                port:
+                  number: 8080
+            path: /api/v1/
+            pathType: ImplementationSpecific

@@ -22,6 +22,7 @@ use anchor_client::{
     },
     Program,
 };
+use anchor_client::anchor_lang::AccountDeserialize;
 
 use anchor_spl::{
     token_interface::ID as TOKEN_2022_PROGRAM_ID,
@@ -33,11 +34,12 @@ use anyhow::Result;
 
 use crate::chain::caller::{ChainClient, setup_client};
 use crate::core::{conf::ClientConfig};
+use crate::core::error::ClientError;
 
 
 pub struct EventCaller {
     pub client: ChainClient,
-    pub config: Arc<ClientConfig>,
+    pub config: ClientConfig,
     pub program: Program<Arc<Keypair>>,
     pub payer: Pubkey
 }
@@ -62,7 +64,7 @@ impl EventCaller {
     pub const MARKER_SEED: &'static [u8] = b"marker";
 
 
-    pub fn new (cfg: Arc<ClientConfig>) -> Result<Self> {
+    pub fn new (cfg: ClientConfig) -> Result<Self> {
         let config_clone = cfg.clone();
         let client = setup_client(&config_clone)?;
         let program = client.program(pubkey!(cfg.event.program_id).parse()?)?;
@@ -276,6 +278,20 @@ impl EventCaller {
             } });
         let sig = ix.send()?;
         Ok(sig)
+    }
+
+    pub fn fetch_event_market_data(&self, open_ts: u64) -> Result<EventMarket> {
+        let event_market_pubkey = self.get_event_market(&self.config.oracle.config_name, open_ts)?;
+        let event_market_data = self.program.rpc()
+            .get_account_data(&event_market_pubkey)
+            .map_err(|_| {
+                ClientError::CannotFindAccountFromBlockChain
+            })?;
+        let event_market = EventMarket::try_deserialize(&mut event_market_data.as_slice())
+            .map_err(|_| {
+                ClientError::CannotDeserializeAccountData
+            })?;
+        Ok(event_market)
     }
 
     pub fn create_event_market(

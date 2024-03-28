@@ -8,6 +8,7 @@ pub struct ClientConfig {
     pub market: Market,
     pub metadata: Metadata,
     pub tokenomics: Tokenomics,
+    pub api: Api
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -64,5 +65,10 @@ pub struct Tokenomics {
     pub vision_mining: u64,
     pub event_mining: u64,
     pub event_prize: u64,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct Api {
+    pub port: u64,
 }
 

@@ -2,6 +2,8 @@ mod chain;
 mod core;
 mod service;
 mod util;
+mod data;
+mod api;
 
 pub mod prelude {
     pub use crate::core::conf::ClientConfig;
@@ -14,4 +16,6 @@ pub mod prelude {
         feeder::Feeder,
         event_manager::EventManager
     };
+    pub use crate::data::mem_db::{Conn, FearAndGreedApiData};
+    pub use crate::api::serve;
 }

@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use crate::prelude::*;
 use crate::service::fetcher::FetcherFNG;
+use crate::data::mem_db::*;
 use anyhow::Result;
 
 
@@ -8,18 +8,20 @@ pub struct Feeder {
     pub caller: ChainCaller,
     pub fetcher: FetcherFNG,
     pub latest_timestamp: u64,
+    pub db_conn: Conn,
 }
 
 impl Feeder{
 
-    pub fn new(cfg: Arc<ClientConfig>) -> Result<Feeder> {
+    pub fn new(cfg: ClientConfig, db_conn: Conn) -> Result<Feeder> {
         let caller = ChainCaller::new(cfg)?;
         let fetcher = FetcherFNG::new();
         let latest_timestamp: u64 = 0;
         Ok(Feeder{
             caller,
             fetcher,
-            latest_timestamp
+            latest_timestamp,
+            db_conn
         })
     }
 
@@ -49,6 +51,9 @@ impl Feeder{
                 };
                 let sig = self.caller.set_oracle_data(&request)?;
                 println!("[INFO] Update solana oracle data account successfully {}", sig);
+
+                let new_data = self.caller.get_oracle_data()?;
+                self.db_conn.upsert(Some(&new_data), None)?;
             }
             self.latest_timestamp = ts;
         }

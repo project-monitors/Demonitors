@@ -12,12 +12,20 @@ toml = "0.8.10"
 anyhow = "1.0.80"
 thiserror = "1.0.57"
 chrono = "0.4.35"
-reqwest = { version = "0.11.26", features = ["json", "blocking"] }
+reqwest = { version = "0.12.2", features = ["json", "blocking"] }
 monitor = { path = "../programs/monitor/programs/monitor"}
 factory = { path = "../programs/factory/programs/factory"}
 serde_json = "1.0.114"
 ctrlc = "3.4.4"
 anchor-spl = "0.29.0"
+sled = "0.34.7"
+byteorder = "1.5.0"
+zerocopy = "0.6.6"
+tokio = "1.36.0"
+tracing = "0.1.40"
+axum = "0.7"
+http = "1.1.0"
+tracing-subscriber = "0.3.18"
 
 [lib]
 name = "client"

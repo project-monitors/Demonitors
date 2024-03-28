@@ -39,7 +39,7 @@ pub struct OracleDataRequest {
 
 pub struct ChainCaller {
     pub client: ChainClient,
-    pub config: Arc<ClientConfig>,
+    pub config: ClientConfig,
     pub program: Program<Arc<Keypair>>,
     pub payer: Pubkey,
     pub config_pda: (Pubkey, u8),
@@ -48,7 +48,7 @@ pub struct ChainCaller {
 
 impl ChainCaller{
 
-    pub fn new (cfg: Arc<ClientConfig>) -> Result<ChainCaller> {
+    pub fn new (cfg: ClientConfig) -> Result<ChainCaller> {
         let config_clone = cfg.clone();
         let client = setup_client(&config_clone)?;
         let program = client.program(pubkey!(cfg.oracle.program_id).parse()?)?;
