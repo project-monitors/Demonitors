@@ -48,7 +48,7 @@ impl<'info> ToggleEventMarket<'info> {
         }
         if params.toggle {
             event_market.is_opened = !event_market.is_opened;
-            if event_market.is_opened == true {
+            if event_market.is_opened {
                 emit!(EventEvent{
                 event_type: EventEventType::Open,
                 event_config: self.event_config.key(),

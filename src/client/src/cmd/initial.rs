@@ -58,8 +58,10 @@ fn initialize () -> Result<(), Error> {
     println!("[Debug] Initial mint successfully. \n\
         https://explorer.solana.com/tx/{}{}", sig, suffix);
 
-    let mint_to_vision_mining = event_caller.config.tokenomics.vision_mining;
-    let mint_to_event_mining = event_caller.config.tokenomics.event_mining;
+    let mint_to_vision_mining = event_caller.config.tokenomics.vision_mining
+        * 10_u64.pow(event_caller.config.metadata.ft_token_decimal as u32);
+    let mint_to_event_mining = event_caller.config.tokenomics.event_mining
+        * 10_u64.pow(event_caller.config.metadata.ft_token_decimal as u32);
 
     let vision_mining_pda = event_caller.get_const_name_pda(EventCaller::VISION_MINING_SEED)?;
     let sig = event_caller.mint_tokens(vision_mining_pda, mint_to_vision_mining)?;

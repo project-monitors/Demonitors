@@ -6,11 +6,11 @@ commitment="confirmed"
 network="devnet"
 
 [oracle]
-config_name="terrordemo2"
-config_description="this is terror demo"
+config_name="fearandgreed"
+config_description="FEAR&GREED. The market that we build, unspeakable, enslaves us."
 total_phase=2
 authority_pubkey="42taRyQCVHSgeHynMDkomRSRQ26rZ5Ygm2pq7QGmDwnP"
-interval=15
+interval=30
 program_id="6ULtrYwokDeKTPjArrZYDFQ5yuzZgdZBKCRr2YjyyL22"
 
 [event]
@@ -18,24 +18,24 @@ program_id="BdFDKd6ALeLWuF6X52iLBoaEhK29NwtEUAhWv4bwcmjQ"
 vision_mining_admin_pubkey="9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG"
 
 [market]
-hourly_create=true
+hourly_create=false
 daily_create=true
 
 [metadata]
-ft_token_name="monitor"
+ft_token_name="moni"
 ft_token_symbol="MONI"
-ft_token_url="monitare.xyz"
+ft_token_url="demonitors.xyz"
 ft_token_decimal=9
 sbt_token_name="Protyl"
-sbt_token_symbol="PROTYL"
-sbt_token_url="monitare.xyz"
-event_metadata_url="monitare.xyz"
+sbt_token_symbol="Protyl"
+sbt_token_url="demonitors.xyz"
+event_metadata_url="demonitors.xyz"
 fear_sbt_token_name="Pale Gaze"
 fear_sbt_token_symbol="PGM"
-fear_sbt_token_url="monitare.xyz"
+fear_sbt_token_url="https://arweave.net/b6QECqdO41Lo7udBSN13B6fSbpdPB_xuqo6tfJmtfZo"
 greed_sbt_token_name="Great Swallow"
 greed_sbt_token_symbol="GSM"
-greed_sbt_token_url="monitare.xyz"
+greed_sbt_token_url="https://arweave.net/CC4RfBUF_6G-10hdyPnXNPe87HLnYFtP_nw3KFaC7mM"
 
 
 [tokenomics]

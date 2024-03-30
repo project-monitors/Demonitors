@@ -15,5 +15,8 @@ yarn.lock
 test-ledger
 .anchor
 secret.yaml
+monitor_db
+scripts
+
 
 

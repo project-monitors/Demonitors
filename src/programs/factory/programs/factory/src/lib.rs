@@ -10,7 +10,7 @@ use instructions::*;
 use instructions::resolvers::*;
 
 
-declare_id!("36KZHRWMKbGNsMZ2jMVuRbnMUrjzRr8kmjHyPJ9ipvFW");
+declare_id!("6QDRmHTnVZy7PPDKifFjK6V9Fjm7KSK4cqdNFk3kitvj");
 
 pub const FT_MAX_SUPPLY: u64 = 1_000_000_000 * 1_000_000_000;
 

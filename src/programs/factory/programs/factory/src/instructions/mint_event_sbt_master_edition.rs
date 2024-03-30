@@ -91,7 +91,7 @@ impl<'info> MintEventSBTMasterEdition<'info> {
         let collection_mint = self.collection_mint.key();
         let signer_seeds: [&[&[u8]]; 1] = [&[
             MintConfig::AUTHORITY_SEED,
-            &collection_mint.as_ref()[..],
+            collection_mint.as_ref(),
             &[authority_bump],
         ]];
 

@@ -60,48 +60,6 @@ pub struct InitializeMint<'info> {
     seeds = [GlobalConfig::GLOBAL_CONFIG_SEED],
     bump)]
     pub global_config: Account<'info, GlobalConfig>,
-    // /// CHECK: PDA
-    // #[account(
-    // seeds = [GlobalConfig::VISION_MINING_SEED],
-    // bump = global_config.vision_mining_bump,
-    // constraint = vision_mining_pda.key() == global_config.vision_mining_pda @ ErrorCode::UnexpectedAccount
-    // )]
-    // pub vision_mining_pda: UncheckedAccount<'info>,
-    // /// CHECK: PDA
-    // #[account(
-    // seeds = [GlobalConfig::EVENT_MINING_SEED],
-    // bump = global_config.event_mining_bump,
-    // constraint = event_mining_pda.key() == global_config.event_mining_pda @ ErrorCode::UnexpectedAccount
-    // )]
-    // pub event_mining_pda: UncheckedAccount<'info>,
-    // /// CHECK: PDA
-    // #[account(
-    // seeds = [GlobalConfig::STAKE_MINING_SEED],
-    // bump = global_config.stake_mining_bump,
-    // constraint = stake_mining_pda.key() == global_config.stake_mining_pda @ ErrorCode::UnexpectedAccount
-    // )]
-    // pub stake_mining_pda: UncheckedAccount<'info>,
-    // #[account(
-    // init,
-    // payer = payer,
-    // associated_token::mint = mint,
-    // associated_token::authority = vision_mining_pda,
-    // )]
-    // pub vision_mining_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
-    // #[account(
-    // init,
-    // payer = payer,
-    // associated_token::mint = mint,
-    // associated_token::authority = event_mining_pda,
-    // )]
-    // pub event_mining_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
-    // #[account(
-    // init,
-    // payer = payer,
-    // associated_token::mint = mint,
-    // associated_token::authority = stake_mining_pda,
-    // )]
-    // pub stake_mining_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
     /// CHECK - create token metadata account manually
     #[account(
     mut,
@@ -135,7 +93,7 @@ impl<'info> InitializeMint<'info> {
         require_keys_eq!(authority_pda, self.authority.key(), ErrorCode::UnexpectedAccount);
         let signer_seeds: [&[&[u8]]; 1] = [&[
             MintConfig::AUTHORITY_SEED,
-            &mint_pda.as_ref()[..],
+            &mint_pda.as_ref(),
             &[authority_bump],
         ]];
         CreateV1CpiBuilder::new(&self.token_metadata_program.to_account_info())

@@ -55,7 +55,7 @@ pub struct Claim<'info> {
     pub event_market: Box<Account<'info, EventMarket>>,
     #[account(
     mut,
-    constraint = marker.indicate == *&params.indicate @ ErrorCode::InvalidArgument)]
+    constraint = marker.indicate == params.indicate @ ErrorCode::InvalidArgument)]
     pub marker: Box<Account<'info, Marker>>,
     // #[account(
     // mut,
@@ -199,8 +199,8 @@ impl<'info> Claim<'info> {
             return Ok(())
         } else {
             // Transfer tokens
-            let old_from_balance = self.event_mining_token_account.amount.clone();
-            let old_to_balance = self.token_account.amount.clone();
+            let old_from_balance = self.event_mining_token_account.amount;
+            let old_to_balance = self.token_account.amount;
             let new_from_balance =
                 self.event_mining_token_account.amount.checked_sub(
                     self.event_market.prize).ok_or(ErrorCode::NotSufficientBalance)?;
@@ -244,7 +244,7 @@ impl<'info> Claim<'info> {
                 let event_config_key = self.event_config.key();
                 let payer_key = self.payer.key();
                 let (_,event_sbt_mint_bump) = MintConfig::find_event_sbt_edition_mint_config(
-                    event_config_key, indicate.clone(), payer_key);
+                    event_config_key, indicate, payer_key);
 
                 let payer_ai = self.payer.to_account_info();
 
@@ -310,7 +310,7 @@ impl<'info> Claim<'info> {
 
                 let signer_seeds: [&[&[u8]]; 1] = [&[
                     MintConfig::AUTHORITY_SEED,
-                    &collection_mint_key.as_ref(),
+                    collection_mint_key.as_ref(),
                     &[authority_bump],
                 ]];
 
@@ -329,7 +329,7 @@ impl<'info> Claim<'info> {
                     .edition_mint_authority(&self.authority.to_account_info())
                     .master_edition(&self.event_sbt_master_edition.to_account_info())
                     .edition_marker_pda(&self.event_sbt_edition_pda)
-                     .payer(&self.payer.to_account_info())
+                    .payer(&self.payer.to_account_info())
                     .master_token_account_owner(&self.authority.to_account_info())
                     .master_token_account(&self.event_sbt_master_edition_token_account.to_account_info())
                     .master_metadata(&self.event_sbt_master_edition_metadata.to_account_info())

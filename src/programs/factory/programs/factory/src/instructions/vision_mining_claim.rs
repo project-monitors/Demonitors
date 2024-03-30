@@ -75,8 +75,8 @@ impl<'info> VisionMiningClaim<'info> {
         require!(current_time > 0, ErrorCode::Overflow);
         let current_time_u64 = current_time as u64;
         require!(params.valid_until_time > current_time_u64, ErrorCode::TransactionTimeout);
-        let old_from_balance = self.vision_mining_token_account.amount.clone();
-        let old_to_balance = self.token_account.amount.clone();
+        let old_from_balance = self.vision_mining_token_account.amount;
+        let old_to_balance = self.token_account.amount;
         let new_from_balance = old_from_balance.checked_sub(params.amount)
             .ok_or_else(|| error!(ErrorCode::NotSufficientBalance))?;
         let new_to_balance = old_to_balance.checked_add(params.amount)

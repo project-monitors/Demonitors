@@ -85,12 +85,12 @@ impl<'info> InitializeCollection<'info> {
         let mint_key = &self.mint.key();
         let signer_seeds: [&[&[u8]]; 1] = [&[
             MintConfig::AUTHORITY_SEED,
-            &mint_key.as_ref()[..],
+            mint_key.as_ref(),
             &[authority_bump],
         ]];
         let creator = vec![
             Creator {
-                address: self.authority.key.clone(),
+                address: self.authority.key(),
                 verified: true,
                 share: 100,
             }

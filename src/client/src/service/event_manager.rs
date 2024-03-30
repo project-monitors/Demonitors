@@ -64,29 +64,29 @@ impl EventManager {
                 if !self.checklist.contains_key(&expected_hour) {
                     let close_ts = &expected_hour + 3600;
                     let open_ts = expected_hour;
-                    if self.event_caller.fetch_event_market_data(open_ts).is_err() {
+                    if self.event_caller.fetch_event_market_data(close_ts).is_err() {
                         let sig = self.event_caller.create_event_market(
                             open_ts, close_ts, close_ts)?;
-                        println!("[Debug] Create hourly event market successfully. Open ts: {} \n\
-                    https://explorer.solana.com/tx/{}?cluster=devnet", open_ts, sig);
+                        println!("[Debug] Create hourly event market successfully. Close ts: {} \n\
+                    https://explorer.solana.com/tx/{}?cluster=devnet", close_ts, sig);
                     }
 
                     let now: DateTime<Utc> = Utc::now();
-                    let check_ts = now.timestamp() as u64;
+                    let check_ts = (now.timestamp() as u64).checked_add(3600).ok_or(anyhow!("ts add error"))?;
                     let mut toggled = false;
                     let mut fetched = false;
-                    if check_ts > open_ts {
+                    if check_ts > close_ts {
                         fetched = true;
                     }
-                    let market = self.event_caller.fetch_event_market_data(open_ts)?;
+                    let market = self.event_caller.fetch_event_market_data(close_ts)?;
                     if !market.is_opened {
                         toggled = true;
                     }
                     if toggled || fetched {
                         let sig = self.event_caller.toggle_event_market(
-                            open_ts, toggled, fetched)?;
-                        println!("[Debug] Toggle hourly event market successfully. Open ts: {}  \n\
-                                https://explorer.solana.com/tx/{}?cluster=devnet", open_ts, sig);
+                            close_ts, toggled, fetched)?;
+                        println!("[Debug] Toggle hourly event market successfully. Close ts: {}  \n\
+                                https://explorer.solana.com/tx/{}?cluster=devnet", close_ts, sig);
                     }
                     let event = Event{
                         open_ts,
@@ -95,7 +95,7 @@ impl EventManager {
                         fetched,
                         ..Default::default()
                     };
-                    self.checklist.insert(open_ts, event);
+                    self.checklist.insert(close_ts, event);
                 }
             }
         }
@@ -120,29 +120,29 @@ impl EventManager {
                 if !self.checklist.contains_key(&expected_day) {
                     let close_ts = &expected_day + 86400;
                     let open_ts = expected_day;
-                    if self.event_caller.fetch_event_market_data(open_ts).is_err() {
+                    if self.event_caller.fetch_event_market_data(close_ts).is_err() {
                         let sig = self.event_caller.create_event_market(
                             open_ts, close_ts, close_ts)?;
-                        println!("[Debug] Create daily event market successfully. Open ts: {} \n\
-                        https://explorer.solana.com/tx/{}?cluster=devnet", open_ts, sig);
+                        println!("[Debug] Create daily event market successfully. Close ts: {} \n\
+                        https://explorer.solana.com/tx/{}?cluster=devnet", close_ts, sig);
                     }
 
                     let now: DateTime<Utc> = Utc::now();
-                    let check_ts = now.timestamp() as u64;
+                    let check_ts = (now.timestamp() as u64).checked_add(86400).ok_or(anyhow!("ts add error"))?;
                     let mut toggled = false;
                     let mut fetched = false;
-                    if check_ts > open_ts {
+                    if check_ts >= close_ts {
                         fetched = true;
                     }
-                    let market = self.event_caller.fetch_event_market_data(open_ts)?;
+                    let market = self.event_caller.fetch_event_market_data(close_ts)?;
                     if !market.is_opened {
                         toggled = true;
                     }
                     if toggled || fetched {
                         let sig = self.event_caller.toggle_event_market(
-                            open_ts, toggled, fetched)?;
-                        println!("[Debug] Toggle daily event market successfully. Open ts: {}  \n\
-                            https://explorer.solana.com/tx/{}?cluster=devnet", open_ts, sig);
+                            close_ts, toggled, fetched)?;
+                        println!("[Debug] Toggle daily event market successfully. Close ts: {}  \n\
+                            https://explorer.solana.com/tx/{}?cluster=devnet", close_ts, sig);
                     }
                     let event = Event{
                         open_ts,
@@ -151,7 +151,7 @@ impl EventManager {
                         fetched,
                         ..Default::default()
                     };
-                    self.checklist.insert(open_ts, event);
+                    self.checklist.insert(close_ts, event);
                 }
             }
         }
@@ -164,20 +164,22 @@ impl EventManager {
             let check_ts = now.timestamp() as u64;
             if check_ts > event.open_ts {
                 if !event.fetched {
-                    let event_market = self.event_caller.fetch_event_market_data(event.open_ts)?;
+                    let event_market = self.event_caller.fetch_event_market_data(event.close_ts)?;
                     let mut toggle = true;
                     if event_market.is_opened {
                         toggle = false
                     }
-                    let sig = self.event_caller.toggle_event_market(event.open_ts, toggle, true)?;
-                    println!("[Debug][Refine] Toggle event market successfully. Open ts: {}  \n\
-                            https://explorer.solana.com/tx/{}?cluster=devnet", event.open_ts, sig);
+                    let sig = self.event_caller.toggle_event_market(event.close_ts, toggle, true)?;
+                    println!("[Debug][Refine] Toggle event market successfully. Close ts: {}  \n\
+                            https://explorer.solana.com/tx/{}?cluster=devnet", event.close_ts, sig);
                     event.fetched = true;
                 }
                 if !event.resolved && check_ts > event.close_ts {
-                    let sig = self.event_caller.resolve(event.open_ts, self.config.tokenomics.event_prize)?;
-                    println!("[Debug][Resolve] Resolve event market successfully. Open ts: {}  \n\
-                            https://explorer.solana.com/tx/{}?cluster=devnet",  event.open_ts, sig);
+                    let prize =  self.config.tokenomics.event_prize
+                        * 10_u64.pow(self.config.metadata.ft_token_decimal as u32);
+                    let sig = self.event_caller.resolve(event.close_ts, prize)?;
+                    println!("[Debug][Resolve] Resolve event market successfully. Close ts: {}  \n\
+                            https://explorer.solana.com/tx/{}?cluster=devnet",  event.close_ts, sig);
                     event.resolved = true;
                 }
             }

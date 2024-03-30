@@ -6,10 +6,9 @@
     "dependencies": {
         "@coral-xyz/anchor": "^0.29.0",
         "ts": "^0.2.2",
-        "@metaplex-foundation/umi" : "^0.9.1",
-        "@metaplex-foundation/umi-bundle-defaults": "^0.9.1",
         "@metaplex-foundation/mpl-token-metadata": "^3.2.1",
-        "@solana/spl-token": "^0.4.1"
+        "@solana/spl-token": "^0.4.1",
+        "borsh": "^0.6.0"
     },
     "devDependencies": {
         "@types/bn.js": "^5.1.0",

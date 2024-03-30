@@ -11,6 +11,7 @@ import {
     getMintLen,
     ExtensionType,
 } from "@solana/spl-token";
+import { deserializeUnchecked } from 'borsh';
 
 
 describe("factory", () => {
@@ -246,6 +247,51 @@ describe("factory", () => {
             "confirmed" );
     }
 
+    enum MetadataKey {
+        Uninitialized = 0,
+        MetadataV1 = 4,
+        EditionV1 = 1,
+        MasterEditionV1 = 2,
+        MasterEditionV2 = 6,
+        EditionMarker = 7,
+    }
+
+    class MasterEditionV2 {
+        key: MetadataKey;
+        supply: anchor.BN;
+        maxSupply?: anchor.BN;
+
+        constructor(args: { key: MetadataKey; supply: anchor.BN; maxSupply?: anchor.BN }) {
+            this.key = MetadataKey.MasterEditionV2;
+            this.supply = args.supply;
+            this.maxSupply = args.maxSupply;
+        }
+    }
+
+    const METADATA_SCHEMA = new Map<any, any>([
+        [
+            MasterEditionV2,
+            {
+                kind: 'struct',
+                fields: [
+                    ['key', 'u8'],
+                    ['supply', 'u64'],
+                    ['maxSupply', { kind: 'option', type: 'u64' }],
+                ],
+            },
+        ]
+    ]);
+
+    const decodeMasterEdition = (
+        buffer: Buffer,
+    ): MasterEditionV2 => {
+        return deserializeUnchecked(
+            METADATA_SCHEMA,
+            MasterEditionV2,
+            buffer,
+        ) as MasterEditionV2;
+    };
+
     async function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
@@ -258,7 +304,8 @@ describe("factory", () => {
         return Math.floor(utcMidnight.getTime() / 1000);
     }
 
-
+    const MARKET_INTERVAL = Math.floor(new Date().getTime() / 1000) - getUTCMidnightTimestamp() + 10;
+    console.log("MARKET_INTERVAL: ", MARKET_INTERVAL);
     const existed_global_config_pubkey = get_pda(GLOBAL_CONFIG_SEED).account_pubkey;
     const existed_config_name = "22QVCPu62x2Z3abSdgHzpU4PyFttu9u";
     const existed_config_pubkey = get_oracle_config(existed_config_name).account_pubkey;
@@ -276,8 +323,7 @@ describe("factory", () => {
 
 
     it("Should: The global config account is initialized!", async () => {
-        const existed_config_account_info = await
-            provider.connection.getAccountInfo(existed_global_config_pubkey);
+        const existed_config_account_info = await provider.connection.getAccountInfo(existed_global_config_pubkey);
         if (existed_config_account_info === null) {
             console.log("[ONCE] Create Global Config Account: ", existed_global_config_pubkey.toBase58())
             const tx = await program.methods.initializeGlobalConfig()
@@ -395,112 +441,112 @@ describe("factory", () => {
 
         await program.removeEventListener(subscriptionId);
     });
-
-    it("Should: Claim vision mining", async () => {
-
-        // load vision mining admin keypair
-        const vision_mining_admin_wallet_path = '../../../test-ledger/wallet.json';
-        const vision_mining_admin_wallet_string = readFileSync(vision_mining_admin_wallet_path, 'utf8');
-        const vision_mining_admin_keypair = anchor.web3.Keypair.fromSecretKey(new Uint8Array(JSON.parse(vision_mining_admin_wallet_string)));
-
-        const mint_pubkey = get_pda(MINT_SEED).account_pubkey;
-        console.log("Mint account: ", mint_pubkey.toBase58());
-        const vision_mining_pda = get_pda(VISION_MINING_SEED).account_pubkey;
-        console.log("Vision mining pda account: ", vision_mining_pda.toBase58());
-        const vision_mining_token_account = await getAssociatedTokenAddress(
-            mint_pubkey, vision_mining_pda, true,
-            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-        console.log("Vision mining token account: ", vision_mining_token_account.toBase58());
-        const user_pubkey = wallet.publicKey;
-        console.log("User system account: ", user_pubkey.toBase58());
-        const user_token_account = await getAssociatedTokenAddress(
-            mint_pubkey, user_pubkey, true,
-            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-        console.log("User token account: ", user_token_account.toBase58());
-
-        // Client need create token account for the user first
-        let user_token_account_info = await
-            provider.connection.getAccountInfo(user_token_account);
-        if (user_token_account_info === null) {
-            console.log("Create user token account first.")
-            const instruction = createAssociatedTokenAccountInstruction(
-                wallet.publicKey,
-                user_token_account,
-                user_pubkey,
-                mint_pubkey,
-                TOKEN_2022_PROGRAM_ID,
-                ASSOCIATED_TOKEN_PROGRAM_ID,
-            );
-            let tx = new anchor.web3.Transaction;
-            tx.add(instruction);
-            const res = await program.provider.sendAndConfirm(
-                tx,
-                [wallet.payer]
-            );
-            console.log("Account ATA Res: ", res);
-        }
-        console.log("Claim vision mining: \n" +
-            "Transfer from vision mining token account, ", vision_mining_token_account.toBase58(), +
-            "to user token account ", user_token_account.toBase58());
-        const interval = 10;
-        let now = new Date();
-        now.setMinutes(now.getMinutes() + interval);
-        const unixTimestampInSeconds = Math.floor((now.getTime() / 1000));
-        const params = {
-            amount:  new anchor.BN(10e8),
-            validUntilTime: new anchor.BN(unixTimestampInSeconds)
-        }
-        const subscriptionId = program.addEventListener("BalanceChangeEvent", (event, slot) => {
-            console.log('Event data:', event);
-            console.log('Slot:', slot);
-        });
-        const tx = await program.methods.visionMiningClaim(params)
-            .accounts({
-                payer: wallet.publicKey,
-                visionMiningAdmin: vision_mining_admin_keypair.publicKey,
-                globalConfig: existed_global_config_pubkey,
-                mint: mint_pubkey,
-                visionMiningPda: vision_mining_pda,
-                visionMiningTokenAccount: vision_mining_token_account,
-                tokenAccount: user_token_account,
-                tokenProgram: TOKEN_2022_PROGRAM_ID,
-            }).transaction();
-
-        // Partial sign with admin keypair
-
-        const { blockhash } = await provider.connection.getLatestBlockhash();
-        tx.recentBlockhash = blockhash;
-        tx.feePayer = wallet.publicKey;
-        console.log("Vision mining admin pubkey: ", vision_mining_admin_keypair.publicKey.toBase58())
-        tx.partialSign(vision_mining_admin_keypair);
-
-
-        // Serialize transaction for client signing
-        let serialized_transaction = tx.serialize({ requireAllSignatures: false });
-        console.log("Serialized Transaction send from admin");
-
-        // Deserialize transaction and sign with client wallet
-        let transaction_to_sign = anchor.web3.Transaction.from(serialized_transaction);
-        transaction_to_sign.partialSign(wallet.payer);
-
-        // Re-serialize and send transaction
-        // serialized_transaction = transaction_to_sign.serialize({ requireAllSignatures: false });
-        const txId = await provider.sendAndConfirm(transaction_to_sign).catch(e => console.error(e));
-
-        console.log("Transaction signature: ", txId);
-
-        const latestBlockHash = await provider.connection.getLatestBlockhash();
-
-        // @ts-ignore
-        await provider.connection.confirmTransaction({
-                blockhash: latestBlockHash.blockhash,
-                lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-                signature: txId,},
-            "confirmed" );
-
-        await program.removeEventListener(subscriptionId);
-    });
-
+    //
+    // it("Should: Claim vision mining", async () => {
+    //
+    //     // load vision mining admin keypair
+    //     const vision_mining_admin_wallet_path = '../../../test-ledger/wallet.json';
+    //     const vision_mining_admin_wallet_string = readFileSync(vision_mining_admin_wallet_path, 'utf8');
+    //     const vision_mining_admin_keypair = anchor.web3.Keypair.fromSecretKey(new Uint8Array(JSON.parse(vision_mining_admin_wallet_string)));
+    //
+    //     const mint_pubkey = get_pda(MINT_SEED).account_pubkey;
+    //     console.log("Mint account: ", mint_pubkey.toBase58());
+    //     const vision_mining_pda = get_pda(VISION_MINING_SEED).account_pubkey;
+    //     console.log("Vision mining pda account: ", vision_mining_pda.toBase58());
+    //     const vision_mining_token_account = await getAssociatedTokenAddress(
+    //         mint_pubkey, vision_mining_pda, true,
+    //         TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    //     console.log("Vision mining token account: ", vision_mining_token_account.toBase58());
+    //     const user_pubkey = wallet.publicKey;
+    //     console.log("User system account: ", user_pubkey.toBase58());
+    //     const user_token_account = await getAssociatedTokenAddress(
+    //         mint_pubkey, user_pubkey, true,
+    //         TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    //     console.log("User token account: ", user_token_account.toBase58());
+    //
+    //     // Client need create token account for the user first
+    //     let user_token_account_info = await
+    //         provider.connection.getAccountInfo(user_token_account);
+    //     if (user_token_account_info === null) {
+    //         console.log("Create user token account first.")
+    //         const instruction = createAssociatedTokenAccountInstruction(
+    //             wallet.publicKey,
+    //             user_token_account,
+    //             user_pubkey,
+    //             mint_pubkey,
+    //             TOKEN_2022_PROGRAM_ID,
+    //             ASSOCIATED_TOKEN_PROGRAM_ID,
+    //         );
+    //         let tx = new anchor.web3.Transaction;
+    //         tx.add(instruction);
+    //         const res = await program.provider.sendAndConfirm(
+    //             tx,
+    //             [wallet.payer]
+    //         );
+    //         console.log("Account ATA Res: ", res);
+    //     }
+    //     console.log("Claim vision mining: \n" +
+    //         "Transfer from vision mining token account, ", vision_mining_token_account.toBase58(), +
+    //         "to user token account ", user_token_account.toBase58());
+    //     const interval = 10;
+    //     let now = new Date();
+    //     now.setMinutes(now.getMinutes() + interval);
+    //     const unixTimestampInSeconds = Math.floor((now.getTime() / 1000));
+    //     const params = {
+    //         amount:  new anchor.BN(10e8),
+    //         validUntilTime: new anchor.BN(unixTimestampInSeconds)
+    //     }
+    //     const subscriptionId = program.addEventListener("BalanceChangeEvent", (event, slot) => {
+    //         console.log('Event data:', event);
+    //         console.log('Slot:', slot);
+    //     });
+    //     const tx = await program.methods.visionMiningClaim(params)
+    //         .accounts({
+    //             payer: wallet.publicKey,
+    //             visionMiningAdmin: vision_mining_admin_keypair.publicKey,
+    //             globalConfig: existed_global_config_pubkey,
+    //             mint: mint_pubkey,
+    //             visionMiningPda: vision_mining_pda,
+    //             visionMiningTokenAccount: vision_mining_token_account,
+    //             tokenAccount: user_token_account,
+    //             tokenProgram: TOKEN_2022_PROGRAM_ID,
+    //         }).transaction();
+    //
+    //     // Partial sign with admin keypair
+    //
+    //     const { blockhash } = await provider.connection.getLatestBlockhash();
+    //     tx.recentBlockhash = blockhash;
+    //     tx.feePayer = wallet.publicKey;
+    //     console.log("Vision mining admin pubkey: ", vision_mining_admin_keypair.publicKey.toBase58())
+    //     tx.partialSign(vision_mining_admin_keypair);
+    //
+    //
+    //     // Serialize transaction for client signing
+    //     let serialized_transaction = tx.serialize({ requireAllSignatures: false });
+    //     console.log("Serialized Transaction send from admin");
+    //
+    //     // Deserialize transaction and sign with client wallet
+    //     let transaction_to_sign = anchor.web3.Transaction.from(serialized_transaction);
+    //     transaction_to_sign.partialSign(wallet.payer);
+    //
+    //     // Re-serialize and send transaction
+    //     // serialized_transaction = transaction_to_sign.serialize({ requireAllSignatures: false });
+    //     const txId = await provider.sendAndConfirm(transaction_to_sign).catch(e => console.error(e));
+    //
+    //     console.log("Transaction signature: ", txId);
+    //
+    //     const latestBlockHash = await provider.connection.getLatestBlockhash();
+    //
+    //     // @ts-ignore
+    //     await provider.connection.confirmTransaction({
+    //             blockhash: latestBlockHash.blockhash,
+    //             lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+    //             signature: txId,},
+    //         "confirmed" );
+    //
+    //     await program.removeEventListener(subscriptionId);
+    // });
+    //
     it("Should: Initialize Collection Mint, Metadata and MasterEdition Account", async () => {
         const mint_pubkey = get_pda(SBT_COLLECTION_SEED).account_pubkey;
         console.log("Mint account: ", mint_pubkey.toBase58())
@@ -636,12 +682,13 @@ describe("factory", () => {
         const resolver_pubkey = wallet.publicKey;
         console.log("Resolver account: ", resolver_pubkey.toBase58());
         const utc0_today = getUTCMidnightTimestamp();
-        // for test only
-        // const utc0_tomorrow =  Math.floor((new Date()).getTime() / 1000) + 6;
-        const utc0_tomorrow = utc0_today + 86400;
+    // for test only
+    //     const utc0_today = getUTCMidnightTimestamp() + 17;
+    //     const utc0_tomorrow =  Math.floor((new Date()).getTime() / 1000) + 30;
+        const utc0_tomorrow = utc0_today + MARKET_INTERVAL;
         const open_ts = new anchor.BN(utc0_today);
         const close_ts = new anchor.BN(utc0_tomorrow);
-        const event_market_pubkey = get_event_market(existed_config_pubkey,open_ts).account_pubkey;
+        const event_market_pubkey = get_event_market(existed_config_pubkey,close_ts).account_pubkey;
         console.log("Event data account: ", event_market_pubkey.toBase58());
         let transaction = await program.methods.createEventMarket({
             openTs: open_ts,
@@ -670,6 +717,11 @@ describe("factory", () => {
     });
 
     it("Should: I. Create SBT", async () => {
+        const params = {
+            name: "Protyl",
+            symbol: "Protyl",
+            uri: "https://arweave.net/VL-HXa71cpPIhnkFn6-EKMBW06EmUPj-JUjBWqkrzv0"
+        };
         const mint_pubkey = get_sbt_mint(wallet.publicKey).account_pubkey;
         console.log("Mint account: ", mint_pubkey.toBase58())
         const metadata_pubkey = get_metadata(mint_pubkey).account_pubkey;
@@ -680,11 +732,6 @@ describe("factory", () => {
         console.log("Authority account: ", authority_pubkey.toBase58());
         const existed_mint_account_info = await
             provider.connection.getAccountInfo(mint_pubkey);
-        const params = {
-            name: "Monitor SBT",
-            symbol: "SBT",
-            uri: "monitocol.xyz"
-        };
         if (existed_mint_account_info === null) {
             console.log("[ONCE] Create SBT");
             const subscriptionId = program.addEventListener("SBTMintEvent", (event, slot) => {
@@ -885,8 +932,8 @@ describe("factory", () => {
     });
 
     it("Should: toggle event market", async () => {
-        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
-        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
+        const utc0_tomorrow = new anchor.BN(getUTCMidnightTimestamp() + MARKET_INTERVAL);
+        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_tomorrow).account_pubkey;
         console.log("Event market pubkey: ", event_market_pubkey.toBase58());
         const subscriptionId = program.addEventListener("EventEvent", (event, slot) => {
             console.log('Event data:', event);
@@ -911,10 +958,51 @@ describe("factory", () => {
 
     });
 
+    it("Should: withdraw", async () => {
+        const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
+        console.log("SBT mint pubkey: ", sbt_mint.toBase58());
+        const marker = get_marker(wallet.publicKey, sbt_mint).account_pubkey;
+        console.log("Marker pubkey: ", marker.toBase58());
+        let m = await program.account.marker.fetch(marker);
+        if (m.indicate !== 0) {
+            const event_market_pubkey = m.eventMarket;
+            console.log("Event market pubkey: ", event_market_pubkey.toBase58());
+            const token_account_pubkey = await getAssociatedTokenAddress(
+                sbt_mint, wallet.publicKey, true,
+                TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+            console.log("SBT token account pubkey: ", token_account_pubkey.toBase58());
+            const user_position = get_user_position(event_market_pubkey, wallet.publicKey).account_pubkey;
+            console.log("User position pubkey: ", user_position.toBase58());
+            const event_position = get_event_position(event_market_pubkey, m.indicate).account_pubkey;
+            console.log("Event position pubkey: ", event_position.toBase58());
+            const subscriptionId = program.addEventListener("ChooseEvent", (event, slot) => {
+                console.log('Event data:', event);
+                console.log('Slot:', slot);
+            });
+            const params = {
+                indicate: m.indicate
+            }
+            let tx = await program.methods.withdraw(params)
+                .accounts({
+                    payer: wallet.publicKey,
+                    sbtMint: sbt_mint,
+                    marker: marker,
+                    userPosition: user_position,
+                    eventPosition: event_position,
+                    eventMarket: event_market_pubkey,
+                    systemProgram: anchor.web3.SystemProgram.programId
+                }).rpc();
+            console.log("Withdraw signature: ", tx);
+        }
+
+    })
+
     it("Should: choose", async () => {
-        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
+        const utc0_tomorrow = new anchor.BN(getUTCMidnightTimestamp() + MARKET_INTERVAL);
+        // for test only
+        // const utc0_today = new anchor.BN(getUTCMidnightTimestamp() + 17);
         const indicate = 2;
-        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
+        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_tomorrow).account_pubkey;
         console.log("Event market pubkey: ", event_market_pubkey.toBase58());
         const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
         console.log("SBT mint pubkey: ", sbt_mint.toBase58());
@@ -947,69 +1035,17 @@ describe("factory", () => {
                 eventConfig: event_config_pubkey,
                 eventMarket: event_market_pubkey,
                 systemProgram: anchor.web3.SystemProgram.programId
-            }).rpc();
+            }).rpc().catch(e => console.error(e));
 
         console.log("Signature: ", tx);
         await program.removeEventListener(subscriptionId);
     });
 
-    it("Should: withdraw", async () => {
-        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
-        const indicate = 2;
-        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
-        console.log("Event market pubkey: ", event_market_pubkey.toBase58());
-        const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
-        console.log("SBT mint pubkey: ", sbt_mint.toBase58());
-        const token_account_pubkey = await getAssociatedTokenAddress(
-            sbt_mint, wallet.publicKey, true,
-            TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-        console.log("SBT token account pubkey: ", token_account_pubkey.toBase58());
-        const marker = get_marker(wallet.publicKey, sbt_mint).account_pubkey;
-        console.log("Marker pubkey: ", marker.toBase58());
-        const user_position = get_user_position(event_market_pubkey, wallet.publicKey).account_pubkey;
-        console.log("User position pubkey: ", user_position.toBase58());
-        const event_position = get_event_position(event_market_pubkey, indicate).account_pubkey;
-        console.log("Event position pubkey: ", event_position.toBase58());
-        const subscriptionId = program.addEventListener("ChooseEvent", (event, slot) => {
-            console.log('Event data:', event);
-            console.log('Slot:', slot);
-        });
-        const params = {
-            indicate: indicate
-        }
-        let tx = await program.methods.withdraw(params)
-            .accounts({
-                payer: wallet.publicKey,
-                sbtMint: sbt_mint,
-                marker: marker,
-                userPosition: user_position,
-                eventPosition: event_position,
-                eventMarket: event_market_pubkey,
-                systemProgram: anchor.web3.SystemProgram.programId
-            }).rpc();
-        console.log("Withdraw signature: ", tx);
-
-        tx = await program.methods.choose(params)
-            .accounts({
-                payer: wallet.publicKey,
-                sbtMint: sbt_mint,
-                tokenAccount: token_account_pubkey,
-                marker: marker,
-                userPosition: user_position,
-                eventPosition: event_position,
-                eventConfig: event_config_pubkey,
-                eventMarket: event_market_pubkey,
-                systemProgram: anchor.web3.SystemProgram.programId
-            }).rpc();
-
-        console.log("Re-choose signature: ", tx);
-        await program.removeEventListener(subscriptionId);
-    });
 
     it("Should: resolve", async () => {
         console.log("Set oracle new data.");
         const phase = 1;
-        const raw_data = new anchor.BN(92);
+        const raw_data = new anchor.BN(83);
         const decimals = 0
 
         let tx = await monitor_program.methods.setOracleData(
@@ -1023,11 +1059,11 @@ describe("factory", () => {
             user: wallet.publicKey,
         }).rpc();
         console.log('Set oracle data signature: ', tx);
-        await sleep(5000);
+        await sleep(30000);
         console.log('Resolve event market.')
         const prize = new anchor.BN(30000000000);
-        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
-        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
+        const utc0_tomorrow = new anchor.BN(getUTCMidnightTimestamp() + MARKET_INTERVAL);
+        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_tomorrow).account_pubkey;
         console.log("Event market pubkey: ", event_market_pubkey.toBase58());
         const subscriptionId = program.addEventListener("EventEvent", (event, slot) => {
             console.log('Event data:', event);
@@ -1078,8 +1114,8 @@ describe("factory", () => {
         console.log("Mint token to event mining token account signature: ", tx);
 
         console.log("User claim prize")
-        const utc0_today = new anchor.BN(getUTCMidnightTimestamp());
-        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_today).account_pubkey;
+        const utc0_tomorrow = new anchor.BN(getUTCMidnightTimestamp() + MARKET_INTERVAL);
+        const event_market_pubkey = get_event_market(existed_config_pubkey, utc0_tomorrow).account_pubkey;
         console.log("Event market pubkey: ", event_market_pubkey.toBase58())
         const sbt_mint = get_sbt_mint(wallet.publicKey).account_pubkey;
         console.log("SBT mint pubkey: ", sbt_mint.toBase58());

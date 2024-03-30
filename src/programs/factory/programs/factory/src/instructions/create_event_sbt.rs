@@ -20,10 +20,10 @@ use anchor_spl::{
     },
     metadata::mpl_token_metadata::{
         types::{
-            TokenStandard, PrintSupply
+            TokenStandard, PrintSupply, Creator
         },
         instructions::{
-            CreateV1CpiBuilder
+            CreateV1CpiBuilder,
         },
     },
 };
@@ -170,9 +170,15 @@ impl<'info> CreateEventSBT<'info> {
         let collection_mint_key = &self.collection_mint.key();
         let signer_seeds: [&[&[u8]]; 1] = [&[
             MintConfig::AUTHORITY_SEED,
-            &collection_mint_key.as_ref()[..],
+            collection_mint_key.as_ref(),
             &[authority_bump],
         ]];
+
+        let creators = vec!(Creator{
+            address: self.authority.key(),
+            verified: true,
+            share: 100,
+        });
 
         CreateV1CpiBuilder::new(&self.token_metadata_program.to_account_info())
             .metadata(&self.metadata.to_account_info())
@@ -188,6 +194,7 @@ impl<'info> CreateEventSBT<'info> {
             .symbol(params.symbol)
             .uri(params.uri)
             .seller_fee_basis_points(0)
+            .creators(creators)
             .is_mutable(true)
             .token_standard(TokenStandard::NonFungible)
             .decimals(0)

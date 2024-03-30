@@ -75,14 +75,14 @@ impl<'info> MintTokens<'info> {
         let supply_after_mint = self.mint.supply.checked_add(params.amount)
             .ok_or_else(|| error!(ErrorCode::Overflow))?;
         require!(supply_after_mint <= FT_MAX_SUPPLY, ErrorCode::MintExceedMaxSupply);
-        let old_to_balance = self.token_account.amount.clone();
+        let old_to_balance = self.token_account.amount;
         let new_to_balance = old_to_balance.checked_add(params.amount)
             .ok_or_else(|| error!(ErrorCode::Overflow))?;
         let (_, authority_bump) = MintConfig::find_authority(self.mint.key());
         let mint_key = self.mint.key();
         let signer_seeds: [&[&[u8]]; 1] = [&[
             MintConfig::AUTHORITY_SEED,
-            &mint_key.as_ref()[..],
+            mint_key.as_ref(),
             &[authority_bump],
         ]];
         mint_to(self.mint_ctx().with_signer(&signer_seeds), params.amount)?;

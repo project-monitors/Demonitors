@@ -40,7 +40,7 @@ pub struct CreateEventMarket<'info> {
     space = 8 + EventMarket::LEN,
     seeds = [ EventMarket::EVENT_MARKET_SEED,
     &oracle_config.key().to_bytes(),
-    &params.open_ts.to_be_bytes()[..]],
+    &params.close_ts.to_be_bytes()[..]],
     bump)]
     pub event_market_account: Account<'info, EventMarket>,
     pub system_program: Program<'info, System>

@@ -26,6 +26,7 @@ use anchor_spl::{
         },
     },
 };
+use anchor_spl::metadata::mpl_token_metadata::types::Creator;
 use anchor_spl::token::spl_token::solana_program::program::invoke_signed;
 
 
@@ -165,9 +166,15 @@ impl<'info> CreateSBT<'info> {
         let mint_key = &self.collection_mint.key();
         let signer_seeds: [&[&[u8]]; 1] = [&[
             MintConfig::AUTHORITY_SEED,
-            &mint_key.as_ref()[..],
+            mint_key.as_ref(),
             &[authority_bump],
         ]];
+
+        let creators = vec!(Creator{
+            address: self.authority.key(),
+            verified: true,
+            share: 100,
+        });
 
         let collection_key = self.collection_mint.key();
 
@@ -185,6 +192,7 @@ impl<'info> CreateSBT<'info> {
             .symbol(params.symbol)
             .uri(params.uri)
             .seller_fee_basis_points(0)
+            .creators(creators)
             .is_mutable(false)
             .collection(Collection{verified: false, key: collection_key})
             .token_standard(TokenStandard::NonFungible)

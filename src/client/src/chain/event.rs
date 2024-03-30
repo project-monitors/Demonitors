@@ -149,12 +149,12 @@ impl EventCaller {
         Self::get_pda(pubkey!(self.config.event.program_id).parse()?, seeds)
     }
 
-    pub fn get_event_market(&self, name: &str, open_ts: u64) -> Result<Pubkey> {
+    pub fn get_event_market(&self, name: &str, close_ts: u64) -> Result<Pubkey> {
         let oracle_config = self.get_oracle_config(name)?;
         let seeds: &[&[u8]] = &[
             Self::EVENT_MARKET_SEED,
             oracle_config.as_ref(),
-            &open_ts.to_be_bytes()[..]
+            &close_ts.to_be_bytes()[..]
         ];
         Self::get_pda(pubkey!(self.config.event.program_id).parse()?, seeds)
     }
@@ -280,8 +280,8 @@ impl EventCaller {
         Ok(sig)
     }
 
-    pub fn fetch_event_market_data(&self, open_ts: u64) -> Result<EventMarket> {
-        let event_market_pubkey = self.get_event_market(&self.config.oracle.config_name, open_ts)?;
+    pub fn fetch_event_market_data(&self, close_ts: u64) -> Result<EventMarket> {
+        let event_market_pubkey = self.get_event_market(&self.config.oracle.config_name, close_ts)?;
         let event_market_data = self.program.rpc()
             .get_account_data(&event_market_pubkey)
             .map_err(|_| {
@@ -308,7 +308,7 @@ impl EventCaller {
                 event_config: self.get_event_config(&self.config.oracle.config_name)?,
                 oracle_config: self.get_oracle_config(&self.config.oracle.config_name)?,
                 oracle_data: self.get_oracle_data(&self.config.oracle.config_name)?,
-                event_market_account: self.get_event_market(&self.config.oracle.config_name, open_ts)?,
+                event_market_account: self.get_event_market(&self.config.oracle.config_name, close_ts)?,
                 system_program: SYSTEM_PROGRAM_ID,
             })
             .args(event_instructions::CreateEventMarket {
@@ -323,7 +323,7 @@ impl EventCaller {
     }
 
     pub fn toggle_event_market(
-            &self, open_ts: u64,
+            &self, close_ts: u64,
             toggle: bool,
             fetch_oracle_data: bool) -> Result<Signature> {
         let ix = self.program
@@ -334,7 +334,7 @@ impl EventCaller {
                 global_config: self.get_const_name_pda(Self::GLOBAL_CONFIG_SEED)?,
                 event_config: self.get_event_config(&self.config.oracle.config_name)?,
                 oracle_data: self.get_oracle_data(&self.config.oracle.config_name)?,
-                event_market_account: self.get_event_market(&self.config.oracle.config_name, open_ts)?,
+                event_market_account: self.get_event_market(&self.config.oracle.config_name, close_ts)?,
             })
             .args(event_instructions::ToggleEventMarket{ params: ToggleEventMarketParams {
                 toggle, fetch_oracle_data }});
@@ -407,7 +407,7 @@ impl EventCaller {
         Ok(sig)
     }
 
-    pub fn resolve(&self, open_ts: u64, prize: u64) -> Result<Signature> {
+    pub fn resolve(&self, close_ts: u64, prize: u64) -> Result<Signature> {
         let ix = self.program
             .request()
             .accounts(event_accounts::FearAndGreedEventMarketResolve {
@@ -415,7 +415,7 @@ impl EventCaller {
                 oracle_config: self.get_oracle_config(&self.config.oracle.config_name)?,
                 oracle_data: self.get_oracle_data(&self.config.oracle.config_name)?,
                 event_config: self.get_event_config(&self.config.oracle.config_name)?,
-                event_market: self.get_event_market(&self.config.oracle.config_name, open_ts)?
+                event_market: self.get_event_market(&self.config.oracle.config_name, close_ts)?
             })
             .args(event_instructions::Resolve {
                 params: FearAndGreedEventMarketResolveParams {
