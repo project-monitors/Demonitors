@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: monitor-client-conf
-  namespace: monitor-test
+  namespace: monitor-uat
 data:
   config.toml: |
     [solana]
@@ -13,15 +13,15 @@ data:
     network="devnet"
     
     [oracle]
-    config_name="22QVCPu62x2Z3abSdgHzpU4PyFttu9u"
-    config_description="this is terror demo"
+    config_name="fearandgreed"
+    config_description="FEAR&GREED. The market that we build, unspeakable, enslaves us."
     total_phase=2
     authority_pubkey="42taRyQCVHSgeHynMDkomRSRQ26rZ5Ygm2pq7QGmDwnP"
-    interval=15
+    interval=30
     program_id="12YQKMkv1xZ1B4gwVMiGTcYvY1z6TpdFvyAWyjhuC63c"
     
     [event]
-    program_id="36KZHRWMKbGNsMZ2jMVuRbnMUrjzRr8kmjHyPJ9ipvFW"
+    program_id="6QDRmHTnVZy7PPDKifFjK6V9Fjm7KSK4cqdNFk3kitvj"
     vision_mining_admin_pubkey="9BCXkJbiftuJCf8mydw7znBr3HmsAydgikYkkPwcqbWG"
     
     [market]
@@ -29,21 +29,21 @@ data:
     daily_create=true
     
     [metadata]
-    ft_token_name="monitor"
+    ft_token_name="moni"
     ft_token_symbol="MONI"
-    ft_token_url="monitare.xyz"
+    ft_token_url="demonitors.xyz"
     ft_token_decimal=9
     sbt_token_name="Protyl"
-    sbt_token_symbol="PROTYL"
-    sbt_token_url="monitare.xyz"
-    event_metadata_url="monitare.xyz"
+    sbt_token_symbol="Protyl"
+    sbt_token_url="demonitors.xyz"
+    event_metadata_url="demonitors.xyz"
     fear_sbt_token_name="Pale Gaze"
     fear_sbt_token_symbol="PGM"
-    fear_sbt_token_url="monitare.xyz"
+    fear_sbt_token_url="https://arweave.net/b6QECqdO41Lo7udBSN13B6fSbpdPB_xuqo6tfJmtfZo"
     greed_sbt_token_name="Great Swallow"
     greed_sbt_token_symbol="GSM"
-    greed_sbt_token_url="monitare.xyz"
-    
+    greed_sbt_token_url="https://arweave.net/CC4RfBUF_6G-10hdyPnXNPe87HLnYFtP_nw3KFaC7mM"
+
     
     [tokenomics]
     vision_mining = 10000000
@@ -58,7 +58,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: monitor-client
-  namespace: monitor-test
+  namespace: monitor-uat
 spec:
   replicas: 1
   selector:
@@ -72,6 +72,7 @@ spec:
       containers:
         - name: monitor-client
           image: 407324771176.dkr.ecr.us-east-2.amazonaws.com/monitors-client:latest
+          imagePullPolicy: Always
           readinessProbe:
             failureThreshold: 3
             initialDelaySeconds: 5
@@ -90,7 +91,7 @@ spec:
             timeoutSeconds: 30
           resources:
             limits:
-              memory: "200M"
+              memory: "800M"
               cpu: "0.2"
             requests:
               memory: "50M"
@@ -119,7 +120,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: monitor-client-svc
-  namespace: monitor-test
+  namespace: monitor-uat
 spec:
   type: ClusterIP
   clusterIP: None
@@ -130,27 +131,57 @@ spec:
       protocol: TCP
       name: port8080
 
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  annotations:
-    nginx.ingress.kubernetes.io/cors-allow-methods: GET, POST, OPTIONS
-    nginx.ingress.kubernetes.io/cors-allow-origin: '*'
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Length, X-CSRF-Token, Token,session,X_Requested_With,Accept, Origin, Host, Connection, Accept-Encoding, Accept-Language,DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Pragma, token, X-AppId, X-Signature, X-Signature-Method"
-  name: monitor-client
-  namespace: monitor-test
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: api.monitare.xyz
-      http:
-        paths:
-          - backend:
-              service:
-                name: monitor-client-svc
-                port:
-                  number: 8080
-            path: /api/v1/
-            pathType: ImplementationSpecific
+#---
+#apiVersion: networking.k8s.io/v1
+#kind: Ingress
+#metadata:
+#  annotations:
+#    nginx.ingress.kubernetes.io/cors-allow-methods: GET, POST, OPTIONS
+#    nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+#    nginx.ingress.kubernetes.io/enable-cors: "true"
+#    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Length, X-CSRF-Token, Token,session,X_Requested_With,Accept, Origin, Host, Connection, Accept-Encoding, Accept-Language,DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Pragma, token, X-AppId, X-Signature, X-Signature-Method"
+#  name: monitor-client
+#  namespace: monitor-uat
+#spec:
+#  ingressClassName: nginx
+#  rules:
+#    - host: api.demonitors.xyz
+#      http:
+#        paths:
+#          - backend:
+#              service:
+#                name: monitor-client-svc
+#                port:
+#                  number: 8080
+#            path: /api/v1/
+#            pathType: ImplementationSpecific
+#    - host: api-vision.demonitors.xyz
+#      http:
+#        paths:
+#          - backend:
+#              service:
+#                name: monitors-vision-mining-backend-svc
+#                port:
+#                  number: 3000
+#            path: /api/v1/
+#            pathType: ImplementationSpecific
+#    - host: www.demonitors.xyz
+#      http:
+#        paths:
+#          - backend:
+#              service:
+#                name: monitors-frontend-svc
+#                port:
+#                  number: 80
+#            path: /
+#            pathType: ImplementationSpecific
+#    - host: demonitors.xyz
+#      http:
+#        paths:
+#          - backend:
+#              service:
+#                name: monitors-frontend-svc
+#                port:
+#                  number: 80
+#            path: /
+#            pathType: ImplementationSpecific

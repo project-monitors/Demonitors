@@ -61,7 +61,8 @@ impl EventManager {
             let expected_hour_3 = Self::time_delta_add(now_rounded_hourly, 0, 2, 1)?;
             let expected_hours = [expected_hour_1, expected_hour_2, expected_hour_3];
             for &expected_hour in expected_hours.iter() {
-                if !self.checklist.contains_key(&expected_hour) {
+                let expected_close_hour = &expected_hour + 3600;
+                if !self.checklist.contains_key(&expected_close_hour) {
                     let close_ts = &expected_hour + 3600;
                     let open_ts = expected_hour;
                     if self.event_caller.fetch_event_market_data(close_ts).is_err() {
@@ -117,7 +118,8 @@ impl EventManager {
             let expected_day_3 = Self::time_delta_add(now_rounded_daily, 2, 0, 0)?;
             let expected_days = [expected_day_1, expected_day_2, expected_day_3];
             for &expected_day in expected_days.iter() {
-                if !self.checklist.contains_key(&expected_day) {
+                let expected_close_day = &expected_day + 3600;
+                if !self.checklist.contains_key(&expected_close_day) {
                     let close_ts = &expected_day + 86400;
                     let open_ts = expected_day;
                     if self.event_caller.fetch_event_market_data(close_ts).is_err() {
