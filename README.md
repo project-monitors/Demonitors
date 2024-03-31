@@ -1,6 +1,6 @@
 # DeMonitors
 
-*DeMonitors is a portal, to the boundless vistas of the "Internet landscape".*
+*[DeMonitors](https://demonitors.xyz/) is a portal, to the boundless vistas of the "Internet landscape".*
 
 ![img](./docs/banner.jpg)
 
