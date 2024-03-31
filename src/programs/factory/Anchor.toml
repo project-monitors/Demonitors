@@ -11,7 +11,7 @@ factory = "6QDRmHTnVZy7PPDKifFjK6V9Fjm7KSK4cqdNFk3kitvj"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "/Users/maoma/.config/solana/id.json"
 
 [scripts]

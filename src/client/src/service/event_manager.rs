@@ -83,7 +83,7 @@ impl EventManager {
                     if !market.is_opened {
                         toggled = true;
                     }
-                    if toggled || fetched {
+                    if toggled {
                         let sig = self.event_caller.toggle_event_market(
                             close_ts, toggled, fetched)?;
                         println!("[Debug] Toggle hourly event market successfully. Close ts: {}  \n\
@@ -140,7 +140,7 @@ impl EventManager {
                     if !market.is_opened {
                         toggled = true;
                     }
-                    if toggled || fetched {
+                    if toggled {
                         let sig = self.event_caller.toggle_event_market(
                             close_ts, toggled, fetched)?;
                         println!("[Debug] Toggle daily event market successfully. Close ts: {}  \n\
